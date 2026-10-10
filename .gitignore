@@ -12,3 +12,4 @@ data/rejected-*.log
 .env*
 data/ocr-cache/
 tmp-*.mjs
+data/tessdata/

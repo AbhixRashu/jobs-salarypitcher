@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const CACHE_DIR = path.join(ROOT, 'data', 'ocr-cache');
+const TESSDATA_DIR = path.join(ROOT, 'data', 'tessdata');
 
 const MAX_OCR_PAGES_PER_PDF = Number(process.env.MAX_OCR_PAGES || 10);
 const OCR_PAGE_BUDGET = Number(process.env.OCR_PAGE_BUDGET || 60);
@@ -78,7 +79,10 @@ export async function getOcrWorker() {
   if (!workerPromise) {
     workerPromise = (async () => {
       const { createWorker } = await import('tesseract.js');
-      const worker = await createWorker(OCR_LANGS);
+      const worker = await createWorker(OCR_LANGS, 1, {
+        cachePath: TESSDATA_DIR,
+        cacheMethod: 'readOnly',
+      });
       return worker;
     })();
   }
