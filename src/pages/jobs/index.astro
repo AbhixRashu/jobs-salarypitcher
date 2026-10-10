@@ -1,54 +1,120 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
 import jobs from '../../data/jobs.json';
+import { CATEGORIES, categoryLabel, countByCategory, lastDateLabel } from '../../lib/categories.mjs';
 
 const today = new Date().toISOString().slice(0, 10);
-const sorted = [...jobs].sort((a, b) => (b.datePosted || '').localeCompare(a.datePosted || ''));
-const categories = [...new Set(sorted.map((j) => j.category).filter(Boolean))].sort();
+const freshSince = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+
+const sorted = [...jobs].sort((a, b) => {
+  const aOpen = !a.lastDate || a.lastDate >= today;
+  const bOpen = !b.lastDate || b.lastDate >= today;
+  if (aOpen !== bOpen) return aOpen ? -1 : 1;
+  if (aOpen && bOpen) return (a.lastDate || '9999').localeCompare(b.lastDate || '9999');
+  return (b.datePosted || '').localeCompare(a.datePosted || '');
+});
+
+const counts = countByCategory(jobs);
+const openCount = sorted.filter((j) => !j.lastDate || j.lastDate >= today).length;
 ---
 
-<BaseLayout title="All Jobs" description="Complete archive of official government job notifications with eligibility, age limit, vacancy breakdown, fee, dates and official apply links." canonicalPath="/jobs/">
-  <h1>All job notifications</h1>
-  <p class="muted" style="max-width: 62ch;">
-    {jobs.length} notifications sourced from official government portals. Each page carries the
-    parsed detail — dates, vacancy split, eligibility, age limit, fee, pattern and syllabus.
-    <a href="/sources">See our sources</a>.
+<BaseLayout
+  title="Latest Government Jobs"
+  description="All official government job notifications with eligibility, age limit, vacancy breakdown, application fee, important dates, exam pattern, syllabus and official apply links."
+  canonicalPath="/jobs/"
+>
+  <h1>Latest government jobs</h1>
+  <p class="muted" style="max-width: 64ch;">
+    {jobs.length} notifications from official portals · {openCount} open right now. Each page
+    carries the parsed detail — eligibility, age limit, vacancy split, fee, dates, pattern and
+    syllabus.
   </p>
 
-  {
-    categories.length > 0 ? (
-      <p class="meta" style="margin: 24px 0;">
-        <a class="badge" href="/jobs/">all ({jobs.length})</a>
-        {categories.map((cat) => (
-          <a class="badge" href={`/jobs/?category=${cat}`}>{cat}</a>
-        ))}
-      </p>
-    ) : null
-  }
+  <div class="chip-row">
+    <a class:list={['chip', { active: true }]} href="/jobs/">All ({jobs.length})</a>
+    {
+      CATEGORIES.filter((c) => c.slug !== 'general').map((cat) => (
+        <a class="chip" href={`/jobs/category/${cat.slug}/`}>
+          {cat.label}
+          {counts[cat.slug] ? ` (${counts[cat.slug]})` : ''}
+        </a>
+      ))
+    }
+  </div>
 
   {
     sorted.length === 0 ? (
       <p class="notice">
-        No notifications published yet. The pipeline only publishes listings that pass the detail
-        checks — run <code>npm run ingest</code> to populate from official sources.
+        No notifications published yet. Only listings that pass the detail checks get published —
+        see <a href="/sources">monitored sources</a>.
       </p>
     ) : (
-      sorted.map((job) => {
-        const open = !job.lastDate || job.lastDate >= today;
-        return (
-          <a class="job-card" href={`/jobs/${job.slug}`}>
-            <h3>{job.title}</h3>
-            <div class="meta">
-              <span>{job.organization}</span>
-              {job.vacancies ? <span>{job.vacancies.toLocaleString('en-IN')} posts</span> : null}
-              {job.lastDate ? <span>Last date {job.lastDate}</span> : null}
-              {job.examDate ? <span>Exam {job.examDate}</span> : null}
-              <span class={open ? 'badge open' : 'badge closed'}>{open ? 'Open' : 'Closed'}</span>
-            </div>
-            {job.qualify ? <p class="muted" style="margin: 8px 0 0; font-size: 15px;">{job.qualify}</p> : null}
-          </a>
-        );
-      })
+      <div class="stack">
+        {sorted.map((job) => {
+          const label = lastDateLabel(job.lastDate);
+          return (
+            <EntryRow
+              href={`/jobs/${job.slug}`}
+              title={job.title}
+              meta={[
+                job.organization,
+                categoryLabel(job.category),
+                job.vacancies ? `${job.vacancies.toLocaleString('en-IN')} posts` : null,
+                job.lastDate ? `Last date ${job.lastDate}` : `Posted ${job.datePosted || '—'}`,
+              ]}
+              badge={label?.text || 'Open'}
+              badgeTone={label?.tone || 'open'}
+              snippet={job.qualify || null}
+              isNew={Boolean(job.datePosted && job.datePosted >= freshSince)}
+            />
+          );
+        })}
+      </div>
     )
   }
 </BaseLayout>
+
+<style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 24px 0 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .chip {
+    display: inline-block;
+    background: var(--parchment);
+    color: var(--ink);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .chip:hover {
+    background: #e8e8ed;
+    color: var(--primary);
+    text-decoration: none;
+  }
+
+  .chip.active {
+    background: var(--primary);
+    color: #fff;
+  }
+
+  .chip.active:hover {
+    background: var(--primary-focus);
+    color: #fff;
+  }
+</style>

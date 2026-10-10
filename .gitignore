@@ -10,3 +10,5 @@ data/rejected-*.log
 
 .vercel
 .env*
+data/ocr-cache/
+tmp-*.mjs

@@ -16,7 +16,9 @@
     "ping:indexnow": "node src/scripts/cli-indexnow.mjs"
   },
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.10",
     "astro": "^5.0.0",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^2.4.5",
+    "tesseract.js": "^7.0.0"
   }
 }

@@ -17,8 +17,8 @@ const navItems = [
   { href: '/jobs/', label: 'Jobs' },
   { href: '/results/', label: 'Results' },
   { href: '/admit-cards/', label: 'Admit Cards' },
-  { href: '/calendar/', label: 'Deadlines' },
-  { href: '/sources/', label: 'Sources' },
+  { href: '/categories/', label: 'Categories' },
+  { href: '/calendar/', label: 'Closing Soon' },
   { href: '/about/', label: 'About' },
 ];
 ---
@@ -85,8 +85,10 @@ const navItems = [
           and is not affiliated with any government body.
         </p>
         <p class="footer-links">
-          <a href="/sources">Our data sources</a> · <a href="/about">About</a> ·
-          <a href="/privacy">Privacy</a>
+          <a href="/jobs">Jobs</a> · <a href="/results">Results</a> ·
+          <a href="/admit-cards">Admit cards</a> · <a href="/categories">Categories</a> ·
+          <a href="/calendar">Closing soon</a> · <a href="/sources">Data sources</a> ·
+          <a href="/about">About</a> · <a href="/privacy">Privacy</a>
         </p>
       </div>
     </footer>
@@ -390,6 +392,16 @@ const navItems = [
       .badge.open {
         color: var(--primary);
         background: #e8f1fc;
+      }
+
+      .badge.urgent {
+        color: #b3261e;
+        background: #fdecea;
+      }
+
+      .badge.soon {
+        color: #8a5a00;
+        background: #fff4d6;
       }
 
       .badge.closed {

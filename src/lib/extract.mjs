@@ -56,7 +56,7 @@ function detectOrg(title) {
   return null;
 }
 
-function detectKind(title) {
+export function detectKind(title) {
   for (const rule of KIND_RULES) {
     if (rule.re.test(title)) return rule.kind;
   }

@@ -1,3 +1,5 @@
+import { extractPdfText } from './ocr.mjs';
+
 const MONTHS = {
   january: '01', february: '02', march: '03', april: '04', may: '05', june: '06',
   july: '07', august: '08', september: '09', october: '10', november: '11', december: '12',
@@ -9,32 +11,35 @@ const ENTITIES = {
 };
 
 const SECTION_HEADS = {
-  dates: /^(important dates?|key dates?|dates? of (?:importance|events)|schedule(?: of events)?|timeline|salient dates?|exam date|important timeline|महत्वपूर्ण तिथि|समय सारणी|कार्यक्रम)/i,
-  vacancy: /^(vacanc(?:y|ies)(?: details?| information| position| break-?up| distribution| strength)?|details? of vacanc|post[- ]wise|category[- ]wise vacanc|रिक्ति|पदवार|पदों का विवरण|कुल पद)/i,
-  eligibility: /^(educational qualification(?:s)?|qualification(?: details?|s)?|eligibility criteria|essential qualification|शैक्षिक योग्यता|पात्रता|योग्यता)/i,
-  age: /^(age (?:limit|criteria|relaxation|group)|upper age|minimum age|आयु सीमा|आयु अर्हता|आयु प्रतिबंध)/i,
+  dates: /^(important dates?|key dates?|dates? of (?:importance|events|publication|release|opening|closing)|schedule(?: of events)?|timeline|salient dates?|exam date|important timeline|opening date|closing date|last date|application deadline|महत्वपूर्ण तिथि|समय सारणी|कार्यक्रम)/i,
+  vacancy: /^(vacanc(?:y|ies)(?: details?| information| position| break-?up| distribution| strength)?|details? of vacanc|post[- ]wise|category[- ]wise(?: vacanc| break| bifurcation)?|name of (?:the )?post|पदों का विवरण|रिक्ति|पदवार|कुल पद)/i,
+  eligibility: /^(educational qualification(?:s)?|qualification(?: details?|s)?|eligibility criteria|essential qualification(?:s)?|शैक्षिक योग्यता|पात्रता|योग्यता)/i,
+  age: /^(age (?:limit(?:s)?|criteria|relaxation|group)|upper age|minimum age|आयु सीमा|आयु अर्हता|आयु प्रतिबंध)/i,
   fee: /^(application fee|fee (?:details?|structure|payment|particulars)|exam(?:ination)? fee|शुल्क|आवेदन शुल्क|फीस)/i,
   pattern: /^(exam(?:ination)? pattern|test pattern|exam structure|scheme of examination|परीक्षा पैटर्न|परीक्षा की रूपरेखा)/i,
   syllabus: /^(syllabus|curriculum|subject(?:-wise)? syllabus|पाठ्यक्रम|सिलेबस)/i,
   selection: /^(selection (?:process|procedure|criteria|criterion|method|scheme)|mode of selection|चयन (?:प्रक्रिया|की विधि|विधि|नियम))/i,
-  apply: /^(how to apply|procedure to apply|online application (?:procedure|process|system)|instructions? for (?:applying|application)|application procedure|आवेदन करने की विधि|आवेदन प्रक्रिया)/i,
+  apply: /^(how to apply|procedure to apply|online application (?:procedure|process|system|form)|instructions? for (?:applying|application)|application procedure|steps? (?:to be )?followed|registration|आवेदन करने की विधि|आवेदन प्रक्रिया)/i,
   docs: /^(documents? (?:required|to be uploaded|needed|produced)|list of documents|enclosures? required|आवश्यक दस्तावेज|दस्तावेजों की सूची)/i,
   salary: /^(salary|pay (?:scale|matrix|details?|band)|remuneration|compensation|वेतन|वेतनमान|वेतन का ढाँचा)/i,
 };
 
 const HEAD_RULES = Object.values(SECTION_HEADS);
 
-const QUAL_RE = /\b(10th pass|10th|matric(?:ulation)?|12th pass|12th|intermediate|higher secondary|senior secondary|graduation|graduate|bachelor(?:'s)?|master(?:'s)?|post-?graduate|diploma|it i\b|b\.?tech|b\.?e\b|m\.?b\.?b\.?s|\bmd\b|\bms\b|ph\.?d|nursing|polytechnic|recognized board|equivalent qualification|मैट्रिक|दसवीं|बारहवीं|स्नातक|स्नातकोत्तर|डिप्लोमा|मान्यता प्राप्त)/i;
+const QUAL_RE = /\b(10th pass|10th|matric(?:ulation)?|12th pass|12th|intermediate|higher secondary|senior secondary|graduation|graduate|bachelor(?:'s)?|master(?:'s)?|post-?graduate|diploma|\biti\b|b\.?tech|b\.?e\.?(?:\s*\(|\s+(?:tech|degree|civil|mechanical|electrical|electronics|computer|chemical|engineering))|m\.?b\.?b\.?s|\bmd\b|\bms\b|ph\.?d|nursing|polytechnic|recognized (?:board|university|institute|institution)|equivalent qualification|मैट्रिक|दसवीं|बारहवीं|स्नातक|स्नातकोत्तर|डिप्लोमा|मान्यता प्राप्त)/i;
 
 const NOISE_RE = /buy books|flipkart|amazon|subscribe|subscription|advertis|bharatkosh|e-version|print version|click here|cookie|privacy policy|contact us|rate card|tender|empanel|deputation basis|panel of|for disposal|©|all rights reserved/i;
 
 const CONTENT_RE = /recruit|vacanc|posts?|candidates?|examination|application|engagement|appointment|eligib|age limit|syllabus|pay scale|salary|notification|advertis|form|पद|अभ्यर्थी|परीक्षा|आवेदन|भर्ती/i;
 
+function stripEnumeration(text) {
+  return String(text || '').replace(/^\s*(?:\(?[a-z0-9]{1,2}\)?[.)]\s*)+/i, '').replace(/^\s*[ivx]+\)\s+/i, '').trim();
+}
+
 function looksLikeContent(text) {
-  const s = String(text || '').trim();
+  const s = stripEnumeration(text);
   if (s.length < 20 || s.length > 600) return false;
   if (NOISE_RE.test(s)) return false;
-  if (/^\(?[a-z0-9]{1,2}\)?[).]\s/.test(s)) return false;
   if (/^[a-z]/.test(s)) return false;
   return true;
 }
@@ -107,15 +112,33 @@ function parseDateValue(text) {
   return null;
 }
 
+function cleanHeadLine(line) {
+  return String(line)
+    .replace(/^[\s\u00A0"'“”‘’`()[\]{}<>|:;,.•\-–—*=~^%$#@!?/\\]+/, '')
+    .replace(/^\d{1,3}\s*[.)\]:-]\s*/, '')
+    .replace(/^[a-z]\s*[.)]\s*/i, '')
+    .replace(/^part\s*[-–—]?\s*[a-z0-9]+\s*[:.\-–—]?\s*/i, '')
+    .replace(/[\s:;,.•\-–—]+$/, '')
+    .trim();
+}
+
 function isHeadingLine(line) {
   if (line.length > 90) return false;
-  return HEAD_RULES.some((re) => re.test(line));
+  const head = cleanHeadLine(line);
+  return head.length > 2 && HEAD_RULES.some((re) => re.test(head));
 }
 
 function findSection(lines, sectionKey, maxLines = 40) {
   const headRe = SECTION_HEADS[sectionKey];
   if (!headRe) return [];
-  const start = lines.findIndex((l) => l.length <= 90 && headRe.test(l));
+  let start = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    if (lines[i].length > 90) continue;
+    if (headRe.test(cleanHeadLine(lines[i]))) {
+      start = i;
+      break;
+    }
+  }
   if (start < 0) return [];
   const out = [];
   for (let i = start + 1; i < lines.length && out.length < maxLines; i += 1) {
@@ -162,6 +185,32 @@ export function parseImportantDates(sectionLines) {
   return out;
 }
 
+export function parseDateRows(lines) {
+  const out = [];
+  const seen = new Set();
+  const head =
+    /(?:opening\s+date|closing\s+date|last\s+date|final\s+date|date\s+of\s+(?:publication|release)|publication\s+date|deposit\s+of\s+fee|fee\s+deposit|application\s+deadline|submission\s+of\s+(?:the\s+)?online\s+applications|submitted\s+up\s+to|online\s+applications?\s+can\s+be\s+submitted|अंतिम तिथि|प्रस्तुति की अंतिम तिथि|आवेदन की अंतिम तिथि)/i;
+  const dateRe =
+    /\d{1,2}[./\-]\d{1,2}[./\-]\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}/i;
+  for (const raw of lines) {
+    const line = stripBullet(String(raw)).replace(/^\(?[a-z0-9]{1,2}\)\s*/i, '').replace(/\s{2,}/g, ' ').trim();
+    if (line.length > 160 || !head.test(line)) continue;
+    const m = dateRe.exec(line);
+    if (!m) continue;
+    const date = parseDateValue(m[0]);
+    if (!date) continue;
+    let label = line.slice(0, m.index).replace(/[\s:;,.•\-–—(]+$/, '').trim().replace(/^\W+/, '');
+    label = label.replace(/\s{2,}/g, ' ').slice(0, 70);
+    if (label.length < 4) continue;
+    const key = `${label.toLowerCase()}|${date}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ label, date });
+    if (out.length >= 14) break;
+  }
+  return out;
+}
+
 export function parseVacancyBreakdown(sectionLines, fullText = '') {
   const rows = [];
   const seen = new Set();
@@ -170,6 +219,7 @@ export function parseVacancyBreakdown(sectionLines, fullText = '') {
     if (!Number.isInteger(n) || n <= 0 || n > 2_000_000) return;
     const clean = stripBullet(String(name)).replace(/\s{2,}/g, ' ').trim().replace(/[\s:|]+$/, '');
     if (clean.length < 3 || clean.length > 80 || /^\d+$/.test(clean)) return;
+    if (/^(note|notes|remark|remarks|sl\.?\s*no|serial|point)\b/i.test(clean)) return;
     const key = clean.toLowerCase();
     if (seen.has(key)) return;
     seen.add(key);
@@ -194,7 +244,12 @@ export function parseVacancyBreakdown(sectionLines, fullText = '') {
       continue;
     }
     const reverse = line.match(/^(\d{1,6})\s*(?:posts?|vacanc(?:y|ies)|openings|पदों|पद)\s*(?:[:\-–|]\s*)?(.{3,70})$/i);
-    if (reverse) push(reverse[2], reverse[1]);
+    if (reverse) {
+      push(reverse[2], reverse[1]);
+      continue;
+    }
+    const postsOf = line.match(/\b(\d{1,5})\s+posts?\s+of\s+([^.,;|]{3,70})/i);
+    if (postsOf) push(postsOf[2], postsOf[1]);
   }
 
   if (rows.length === 0 && fullText) {
@@ -213,7 +268,7 @@ export function parseEligibility(sectionLines, fullText = '') {
   for (const s of candidates) {
     if (!QUAL_RE.test(s)) continue;
     if (/placeholder|check official/i.test(s)) continue;
-    const clean = s.replace(/\s{2,}/g, ' ').trim().slice(0, 400);
+    const clean = stripEnumeration(s.replace(/\s{2,}/g, ' ')).slice(0, 400);
     if (clean.length < 25 || !looksLikeContent(clean)) continue;
     if (!notes.includes(clean)) notes.push(clean);
     if (notes.length >= 3) break;
@@ -226,7 +281,10 @@ export function parseAgeLimit(sectionLines) {
   const joined = sectionLines.join(' ');
   let min = null;
   let max = null;
-  let m = joined.match(/(?:between\s*)?(\d{2})\s*(?:-|–|to|and|se|से)\s*(\d{2})\s*(?:years?|वर्ष)/i);
+  let m =
+    joined.match(
+      /not\s+(?:be\s+)?less\s+than\s+(\d{1,2})\s*years?[\s\S]{0,60}?not\s+(?:be\s+)?more\s+than\s+(\d{1,2})\s*years?/i
+    ) || joined.match(/(?:between\s*)?(\d{2})\s*(?:-|–|to|and|se|से)\s*(\d{2})\s*(?:years?|वर्ष)/i);
   if (m) {
     min = Number(m[1]);
     max = Number(m[2]);
@@ -278,9 +336,10 @@ export function parseAgeLimit(sectionLines) {
 export function parseFee(sectionLines) {
   const rows = [];
   const seen = new Set();
-  const CAT = /(?:general|unreserved|reserved|ur\b|gen\b|obc|ews|sc\b|st\b|ph\b|p[_]?w[_]?d|female|women|ex[\s-]?servicemen|candidate|applicant|all other categories)/i;
+  const CAT = /(?:general|unreserved|reserved|ur\b|gen\b|obc|ews|sc\b|st\b|ph\b|p[\s_]?w[\s_]?d|p[\s_]?w[\s_]?b[\s_]?d|female|women|ex[\s-]?servicemen|candidate|applicant|all other categories|all remaining)/i;
   const push = (category, amount) => {
-    const clean = stripBullet(String(category)).replace(/\s{2,}/g, ' ').replace(/[\s:|,]+$/, '').trim().slice(0, 45);
+    let clean = stripBullet(String(category)).replace(/\s{2,}/g, ' ').replace(/[\s:|,]+$/, '').trim().slice(0, 45);
+    if (/^[a-z]/.test(clean)) clean = clean.replace(/^[a-z][a-z'-]*[\s,)-]+/, '').trim();
     if (clean.length < 2 || !/[\p{L}]/u.test(clean)) return;
     if (!CAT.test(clean)) return;
     const key = `${clean.toLowerCase()}|${amount}`;
@@ -293,6 +352,9 @@ export function parseFee(sectionLines) {
     const moneyRe = /([\p{L}\p{N}\s/,&()'-]{3,50}?)\s*[:\-–]?\s*(?:rs\.?|inr|₹)\s*([\d,]+(?:\.\d{1,2})?)/giu;
     let m;
     while ((m = moneyRe.exec(line))) push(m[1], `₹${m[2]}`);
+
+    const slashRe = /([\p{L}\p{N}\s/,&()'-]{3,50}?)\s*[:\-–]?\s*(?:₹\s*)?([\d,]{2,8})\s*\/\s*-/giu;
+    while ((m = slashRe.exec(line))) push(m[1], `₹${m[2]}`);
 
     const nilRe = /([\p{L}\p{N}\s/,&()'-]{3,50}?)\s*[:\-–]?\s*(?:(?:are|is|shall be)\s+)?(?:exempted|nil|no fee|free of cost|waived|छूट|शुल्क नहीं)/giu;
     let n;
@@ -500,7 +562,16 @@ export function parseJobDetails(text, options = {}) {
   const fullText = cleanLines.join('\n');
 
   const dateLines = findSection(cleanLines, 'dates', 30);
-  const importantDates = parseImportantDates(dateLines);
+  const importantDates = (() => {
+    const merged = [...parseImportantDates(dateLines), ...parseDateRows(cleanLines)];
+    const seen = new Set();
+    return merged.filter((d) => {
+      const key = `${d.label.toLowerCase()}|${d.date}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    }).slice(0, 14);
+  })();
   const vacancyBreakdown = parseVacancyBreakdown(findSection(cleanLines, 'vacancy', 40), fullText);
   const eligibility = parseEligibility(findSection(cleanLines, 'eligibility', 30), fullText);
   const ageLimit = parseAgeLimit(findSection(cleanLines, 'age', 30));
@@ -573,35 +644,110 @@ export function detailSectionCount(job) {
   return n;
 }
 
-export async function enrichJobFromPage(job) {
-  if (!job.sourceUrl) return job;
-  let html;
-  try {
-    html = await fetchPage(job.sourceUrl);
-  } catch {
-    return { ...job, extractionLevel: 'rss-title' };
-  }
-  const links = extractLinks(html, job.sourceUrl);
-  const lines = htmlToText(html);
-  const details = parseJobDetails(lines);
-  const merged = { ...job };
-
+function applyDetails(target, details) {
   for (const [key, value] of Object.entries(details)) {
     if (value === undefined || value === null) continue;
     if (Array.isArray(value) && value.length === 0) continue;
-    if (merged[key] === undefined || merged[key] === null || (Array.isArray(merged[key]) && merged[key].length === 0)) {
-      merged[key] = value;
-    } else if (Array.isArray(merged[key]) && Array.isArray(value)) {
-      merged[key] = [...merged[key], ...value.filter((v) => !merged[key].some((e) => JSON.stringify(e) === JSON.stringify(v)))];
-    } else if (typeof merged[key] === 'string' && merged[key].length < value.length && typeof value === 'string') {
-      merged[key] = value;
+    if (target[key] === undefined || target[key] === null || (Array.isArray(target[key]) && target[key].length === 0)) {
+      target[key] = value;
+    } else if (Array.isArray(target[key]) && Array.isArray(value)) {
+      target[key] = [
+        ...target[key],
+        ...value.filter((v) => !target[key].some((e) => JSON.stringify(e) === JSON.stringify(v))),
+      ];
+    } else if (typeof target[key] === 'string' && target[key].length < value.length && typeof value === 'string') {
+      target[key] = value;
+    }
+  }
+  return target;
+}
+
+function deriveFields(job, lines, level = 'page') {
+  const joined = Array.isArray(lines) ? lines.join(' ') : String(lines || '');
+
+  if (!job.lastDate && job.importantDates?.length) {
+    const pick =
+      job.importantDates.find((d) => /last date|final date|last day|last date for|अंतिम तिथि/i.test(d.label)) ||
+      job.importantDates.find((d) => /deadline|submission|apply|online form/i.test(d.label));
+    if (pick) job.lastDate = pick.date;
+  }
+  if (!job.lastDate && joined) {
+    const m = joined.match(/(?:last date|प्रस्तुति की अंतिम तिथि|अंतिम तिथि)[^0-9]{0,80}(\d{1,2}[./-]\d{1,2}[./-]\d{4}|\d{1,2}\s+(?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4})/i);
+    if (m) {
+      const d = parseDateValue(m[1]);
+      if (d) job.lastDate = d;
     }
   }
 
-  if (!merged.applyUrl && links.applyUrl) merged.applyUrl = links.applyUrl;
-  if (!merged.notificationPdf && links.notificationPdf) merged.notificationPdf = links.notificationPdf;
-  merged.extractionLevel = detailSectionCount(merged) >= 2 ? 'page-detail' : 'page-basic';
-  return merged;
+  if (!job.vacancies && job.vacancyBreakdown?.length) {
+    const total = job.vacancyBreakdown.reduce((sum, row) => sum + (Number(row.posts) || 0), 0);
+    if (total > 0) job.vacancies = total;
+  }
+
+  if (!job.qualify && job.qualificationNotes?.length) job.qualify = job.qualificationNotes[0];
+
+  const devanagari = (joined.match(/[\u0900-\u097F]/g) || []).length;
+  const latin = (joined.match(/[A-Za-z]/g) || []).length;
+  job.lang = devanagari > 150 && devanagari > latin * 0.12 ? 'hi' : 'en';
+
+  job.extractionLevel = detailSectionCount(job) >= 2 ? `${level}-detail` : `${level}-basic`;
+  return job;
+}
+
+export function pdfToLines(text) {
+  return htmlToText(String(text || '').replace(/\r/g, '\n').replace(/[ \t]{3,}/g, ' | '));
+}
+
+export async function fetchPdfBuffer(url, ms = 45000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36',
+        accept: 'application/pdf,*/*',
+      },
+      redirect: 'follow',
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > 15_000_000) throw new Error('pdf too large');
+    return buf;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+export async function fetchPdfText(url, ms = 45000, opts = {}) {
+  const buf = await fetchPdfBuffer(url, ms);
+  const { text, mode } = await extractPdfText(buf, { url, ocr: opts.ocr !== false });
+  return { text, mode };
+}
+
+export async function enrichJobFromSource(job) {
+  if (!job.sourceUrl) return job;
+  try {
+    if (/\.pdf(\?|#|$)/i.test(job.sourceUrl)) {
+      const { text, mode } = await fetchPdfText(job.sourceUrl);
+      const lines = pdfToLines(text);
+      applyDetails(job, parseJobDetails(lines));
+      if (!job.notificationPdf) job.notificationPdf = job.sourceUrl;
+      job.textMode = mode;
+      return deriveFields(job, lines, 'pdf');
+    }
+    const html = await fetchPage(job.sourceUrl);
+    const links = extractLinks(html, job.sourceUrl);
+    const lines = htmlToText(html);
+    applyDetails(job, parseJobDetails(lines));
+    if (!job.applyUrl && links.applyUrl) job.applyUrl = links.applyUrl;
+    if (!job.notificationPdf && links.notificationPdf) job.notificationPdf = links.notificationPdf;
+    return deriveFields(job, lines, 'page');
+  } catch {
+    job.extractionLevel = 'rss-title';
+    return job;
+  }
 }
 
 export async function enrichCandidates(candidates, { concurrency = 4, max = Infinity, prefix = '[enrich]' } = {}) {
@@ -614,12 +760,12 @@ export async function enrichCandidates(candidates, { concurrency = 4, max = Infi
       const job = jobs[index];
       index += 1;
       try {
-        Object.assign(job, await enrichJobFromPage(job));
+        await enrichJobFromSource(job);
       } catch {
         job.extractionLevel = 'rss-title';
       }
       console.log(
-        `${prefix} ${job.slug.slice(0, 55)} -> ${job.extractionLevel} (sections=${detailSectionCount(job)})`
+        `${prefix} ${job.slug.slice(0, 55)} -> ${job.extractionLevel}${job.textMode ? ` [${job.textMode}]` : ''} (sections=${detailSectionCount(job)})`
       );
     }
   };

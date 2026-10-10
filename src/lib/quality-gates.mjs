@@ -102,6 +102,13 @@ export function validateJob(job, existing = []) {
     if (posted && last && last < posted) failures.push('dates:last-before-posted');
   }
 
+  if (job.kind === 'job' && job.lastDate) {
+    const last = parseISO(job.lastDate);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    if (last && last < todayStart) failures.push('dates:expired');
+  }
+
   if (job.kind === 'job') {
     const sections = detailSectionCount(job);
     if (sections < 3) failures.push(`detail:too-few-sections:${sections}`);

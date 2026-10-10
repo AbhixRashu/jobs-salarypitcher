@@ -91,6 +91,17 @@ export const OFFICIAL_SOURCES = [
     type: 'portal',
     categories: ['banking', 'central'],
   },
+  {
+    id: 'rpsc-advertisements',
+    name: 'Rajasthan Public Service Commission — Recruitment Advertisements',
+    url: 'https://rpsc.rajasthan.gov.in/advertisements',
+    type: 'table',
+    organization: 'RPSC',
+    orgUrl: 'https://rpsc.rajasthan.gov.in',
+    applyUrl: 'https://rpsc.rajasthan.gov.in/applyonline',
+    category: 'state',
+    categories: ['state'],
+  },
 ];
 
 export const ORG_PORTAL = {

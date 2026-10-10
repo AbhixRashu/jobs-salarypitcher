@@ -1,0 +1,66 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import CategoryTile from '../components/CategoryTile.astro';
+import jobs from '../data/jobs.json';
+import { CATEGORIES, countByCategory } from '../lib/categories.mjs';
+
+const counts = countByCategory(jobs);
+const total = jobs.length;
+---
+
+<BaseLayout
+  title="Job Categories"
+  description="Browse government job notifications by category — central government, state government, banking, railway, defence, teaching, police, engineering, medical, agriculture and research."
+  canonicalPath="/categories/"
+>
+  <h1>Browse jobs by category</h1>
+  <p class="muted" style="max-width: 64ch;">
+    {total} official notifications sorted into {CATEGORIES.length} categories. Open a category to
+    see only that sector's latest jobs with eligibility, dates and official apply links.
+  </p>
+
+  <div class="cat-grid">
+    {
+      CATEGORIES.map((cat) => (
+        <CategoryTile
+          href={`/jobs/category/${cat.slug}/`}
+          label={cat.label}
+          blurb={cat.blurb}
+          count={counts[cat.slug] || 0}
+        />
+      ))
+    }
+  </div>
+
+  <section>
+    <h2>All categories, one index</h2>
+    <ul class="cat-list">
+      {
+        CATEGORIES.map((cat) => (
+          <li>
+            <a href={`/jobs/category/${cat.slug}/`}>{cat.label}</a>
+            <span class="muted"> — {cat.blurb} ({counts[cat.slug] || 0})</span>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+</BaseLayout>
+
+<style>
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 24px;
+  }
+
+  .cat-list {
+    padding-left: 18px;
+    font-size: 15px;
+  }
+
+  .cat-list li {
+    margin-bottom: 8px;
+  }
+</style>

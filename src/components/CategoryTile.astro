@@ -1,0 +1,54 @@
+---
+const { href, label, count = 0, blurb } = Astro.props;
+---
+
+<a class="cat-tile" href={href}>
+  <span class="cat-label">{label}</span>
+  {blurb ? <span class="cat-blurb">{blurb}</span> : null}
+  <span class="cat-count">{count} {count === 1 ? 'notification' : 'notifications'}</span>
+</a>
+
+<style>
+  .cat-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: var(--canvas);
+    border: 1px solid var(--hairline);
+    border-radius: 14px;
+    padding: 16px 18px;
+    color: inherit;
+    transition: border-color 0.15s ease, transform 0.15s ease;
+  }
+
+  .cat-tile:hover {
+    border-color: var(--primary);
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .cat-label {
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ink);
+  }
+
+  .cat-tile:hover .cat-label {
+    color: var(--primary);
+  }
+
+  .cat-blurb {
+    font-size: 13.5px;
+    line-height: 1.45;
+    color: var(--muted);
+  }
+
+  .cat-count {
+    margin-top: 4px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--primary);
+    letter-spacing: -0.01em;
+  }
+</style>

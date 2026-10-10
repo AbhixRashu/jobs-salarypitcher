@@ -1,30 +1,52 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import EntryRow from '../../components/EntryRow.astro';
 import admits from '../../data/admit-cards.json';
+import { categoryLabel } from '../../lib/categories.mjs';
 
-const sorted = [...admits].sort((a, b) => (b.releaseDate || b.datePosted || '').localeCompare(a.releaseDate || a.datePosted || ''));
+const sorted = [...admits].sort((a, b) =>
+  (b.releaseDate || b.datePosted || '').localeCompare(a.releaseDate || a.datePosted || '')
+);
 ---
 
-<BaseLayout title="Admit Cards" description="Released government exam admit cards and hall tickets, sourced from official announcements." canonicalPath="/admit-cards/">
+<BaseLayout
+  title="Admit Cards"
+  description="Released government exam admit cards and hall tickets, sourced from official announcements."
+  canonicalPath="/admit-cards/"
+>
   <h1>Admit cards</h1>
-  <p class="muted">{admits.length} released admit cards tracked from official announcements. <a href="/sources">Our sources</a>.</p>
+  <p class="muted">
+    {admits.length} released admit cards tracked from official announcements. <a href="/sources">Our sources</a>.
+  </p>
 
   {
     sorted.length === 0 ? (
-      <p class="muted">No admit cards published yet. Run <code>npm run agent</code> to populate from official sources.</p>
+      <p class="notice">No admit cards published yet. Releases appear here as soon as the exam authority publishes them.</p>
     ) : (
-      sorted.map((a) => (
-        <a class="job-card" href={`/admit-cards/${a.slug}`}>
-          <h3>{a.title}</h3>
-          <div class="meta">
-            <span>{a.organization}</span>
-            {a.releaseDate ? <span>Released: {a.releaseDate}</span> : null}
-            {a.examDate ? <span>Exam: {a.examDate}</span> : null}
-            <span class="badge open">released</span>
-            <span class="badge">{a.category || 'admit'}</span>
-          </div>
-        </a>
-      ))
+      <div class="stack">
+        {sorted.map((a) => (
+          <EntryRow
+            href={`/admit-cards/${a.slug}`}
+            title={a.title}
+            meta={[
+              a.organization,
+              categoryLabel(a.category),
+              a.releaseDate ? `Released ${a.releaseDate}` : null,
+              a.examDate ? `Exam ${a.examDate}` : null,
+            ]}
+            badge="released"
+            badgeTone="open"
+          />
+        ))}
+      </div>
     )
   }
 </BaseLayout>
+
+<style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+  }
+</style>

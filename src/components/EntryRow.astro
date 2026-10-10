@@ -1,0 +1,106 @@
+---
+const { href, title, meta = [], badge, badgeTone = 'open', snippet, isNew = false } = Astro.props;
+---
+
+<a class="row" href={href}>
+  <div class="row-main">
+    <h3 class="row-title">
+      {isNew ? <span class="flag">New</span> : null}
+      {title}
+    </h3>
+    <div class="row-meta">
+      {meta.filter(Boolean).map((item) => <span>{item}</span>)}
+    </div>
+    {snippet ? <p class="row-snippet">{snippet}</p> : null}
+  </div>
+  {badge ? (
+    <div class={`row-badge badge ${badgeTone}`}>{badge}</div>
+  ) : null}
+</a>
+
+<style>
+  .row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 14px 4px;
+    border-bottom: 1px solid var(--divider);
+    color: inherit;
+  }
+
+  .row:last-child {
+    border-bottom: none;
+  }
+
+  .row:hover {
+    text-decoration: none;
+  }
+
+  .row:hover .row-title {
+    color: var(--primary);
+  }
+
+  .row-main {
+    min-width: 0;
+  }
+
+  .row-title {
+    margin: 0;
+    font-size: 17px;
+    line-height: 1.35;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .row-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 14px;
+    margin-top: 4px;
+    color: var(--muted);
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  .row-snippet {
+    margin: 6px 0 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .row-badge {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .flag {
+    display: inline-block;
+    background: #e8f1fc;
+    color: var(--primary);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    border-radius: 5px;
+    padding: 1px 6px;
+    margin-right: 8px;
+    vertical-align: 2px;
+  }
+
+  @media (max-width: 600px) {
+    .row {
+      align-items: flex-start;
+    }
+
+    .row-badge {
+      font-size: 12px;
+      padding: 3px 10px;
+    }
+  }
+</style>

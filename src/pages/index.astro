@@ -1,40 +1,62 @@
 ---
 import BaseLayout from '../layouts/BaseLayout.astro';
+import EntryRow from '../components/EntryRow.astro';
+import SectionHead from '../components/SectionHead.astro';
+import CategoryTile from '../components/CategoryTile.astro';
 import jobs from '../data/jobs.json';
 import results from '../data/results.json';
 import admits from '../data/admit-cards.json';
+import { CATEGORIES, categoryLabel, countByCategory, daysUntil, lastDateLabel } from '../lib/categories.mjs';
 
 const today = new Date().toISOString().slice(0, 10);
+const freshSince = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+
 const openJobs = jobs
   .filter((j) => !j.lastDate || j.lastDate >= today)
   .sort((a, b) => (a.lastDate || '9999').localeCompare(b.lastDate || '9999'));
-const recent = [...jobs]
+const recentJobs = [...jobs]
   .sort((a, b) => (b.datePosted || '').localeCompare(a.datePosted || ''))
-  .slice(0, 8);
-const byCategory = jobs.reduce((acc, j) => {
-  if (j.category) acc[j.category] = (acc[j.category] || 0) + 1;
-  return acc;
-}, {});
+  .slice(0, 6);
+const recentResults = [...results]
+  .sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || ''))
+  .slice(0, 5);
+const recentAdmits = [...admits]
+  .sort((a, b) => (b.releaseDate || '').localeCompare(a.releaseDate || ''))
+  .slice(0, 5);
+
+const counts = countByCategory(jobs);
 const totalVacancies = jobs.reduce((sum, j) => sum + (Number(j.vacancies) || 0), 0);
 const openVacancies = openJobs.reduce((sum, j) => sum + (Number(j.vacancies) || 0), 0);
+
+const jobMeta = (job) => [
+  job.organization,
+  categoryLabel(job.category),
+  job.vacancies ? `${job.vacancies.toLocaleString('en-IN')} posts` : null,
+  job.lastDate ? `Last date ${job.lastDate}` : `Posted ${job.datePosted || '—'}`,
+];
+const isNew = (job) => Boolean(job.datePosted && job.datePosted >= freshSince);
 ---
 
-<BaseLayout>
+<BaseLayout
+  title="Latest Government Jobs, Results & Admit Cards"
+  description="Free, clean alerts for Indian government jobs, exam results and admit cards — parsed straight from official notifications with eligibility, age limit, vacancy breakdown, fee and dates."
+>
   <Fragment slot="hero">
-    <h1>Government jobs, read straight from the source.</h1>
+    <h1>Latest government jobs, results &amp; admit cards</h1>
     <p class="lead">
-      Every listing is parsed from official portals and notification PDFs — eligibility, age
-      limit, vacancy breakdown, fee, dates, exam pattern and syllabus. No news rewrites, no
-      filler.
+      Official notifications only — each listing carries eligibility, age limit, vacancy split,
+      fee, important dates, exam pattern and syllabus.
     </p>
     <div class="hero-actions">
-      <a class="btn" href="/jobs/">Browse all jobs</a>
-      <a class="btn secondary" href="/calendar/">Deadline calendar</a>
+      <a class="btn" href="/jobs/">Latest jobs</a>
+      <a class="btn secondary" href="/results/">Results</a>
+      <a class="btn secondary" href="/admit-cards/">Admit cards</a>
+      <a class="btn secondary" href="/calendar/">Closing soon</a>
     </div>
     <div class="hero-stats">
       <div>
         <strong>{openJobs.length}</strong>
-        <span>open notifications</span>
+        <span>open jobs</span>
       </div>
       <div>
         <strong>{openVacancies.toLocaleString('en-IN')}</strong>
@@ -42,7 +64,7 @@ const openVacancies = openJobs.reduce((sum, j) => sum + (Number(j.vacancies) || 
       </div>
       <div>
         <strong>{results.length}</strong>
-        <span>results declared</span>
+        <span>results</span>
       </div>
       <div>
         <strong>{admits.length}</strong>
@@ -51,125 +73,171 @@ const openVacancies = openJobs.reduce((sum, j) => sum + (Number(j.vacancies) || 
     </div>
   </Fragment>
 
-  {
-    results.length > 0 ? (
-      <section>
-        <h2>Latest results</h2>
-        {results.slice(0, 5).map((r) => (
-          <a class="job-card" href={`/results/${r.slug}`}>
-            <h3>{r.title}</h3>
-            <div class="meta">
-              <span>{r.organization}</span>
-              {r.releaseDate ? <span>Released {r.releaseDate}</span> : null}
-              <span class="badge open">{r.status || 'declared'}</span>
-            </div>
-          </a>
-        ))}
-      </section>
-    ) : null
-  }
-
-  {
-    admits.length > 0 ? (
-      <section>
-        <h2>Latest admit cards</h2>
-        {admits.slice(0, 5).map((a) => (
-          <a class="job-card" href={`/admit-cards/${a.slug}`}>
-            <h3>{a.title}</h3>
-            <div class="meta">
-              <span>{a.organization}</span>
-              {a.releaseDate ? <span>Released {a.releaseDate}</span> : null}
-              <span class="badge open">released</span>
-            </div>
-          </a>
-        ))}
-      </section>
-    ) : null
-  }
-
   <section>
-    <h2>Deadline radar</h2>
+    <SectionHead title="Latest jobs" href="/jobs/" />
     {
-      openJobs.length === 0 ? (
+      openJobs.length === 0 && recentJobs.length === 0 ? (
         <p class="notice">
-          No open notifications yet. The ingestion pipeline is populating this list from official
-          sources — check <a href="/sources">our sources</a> for what is monitored.
+          Notifications are being pulled from official portals right now. Only listings that pass
+          the detail checks (dates, eligibility, fee, vacancy) get published — see{' '}
+          <a href="/sources">monitored sources</a>.
         </p>
       ) : (
-        openJobs.slice(0, 10).map((job) => (
-          <a class="job-card" href={`/jobs/${job.slug}`}>
-            <h3>{job.title}</h3>
-            <div class="meta">
-              <span>{job.organization}</span>
-              {job.vacancies ? <span>{job.vacancies.toLocaleString('en-IN')} posts</span> : null}
-              {job.lastDate ? <span>Last date {job.lastDate}</span> : null}
-              <span class="badge open">Open</span>
-              <span class="badge">{job.category || 'general'}</span>
-            </div>
-          </a>
-        ))
+        <div class="stack">
+          {(openJobs.length ? openJobs : recentJobs)
+            .slice(0, 8)
+            .map((job) => (
+              <EntryRow
+                href={`/jobs/${job.slug}`}
+                title={job.title}
+                meta={jobMeta(job)}
+                badge={lastDateLabel(job.lastDate)?.text || 'Open'}
+                badgeTone={lastDateLabel(job.lastDate)?.tone || 'open'}
+                snippet={job.qualify || null}
+                isNew={isNew(job)}
+              />
+            ))}
+        </div>
       )
     }
   </section>
 
   {
-    recent.length > 0 ? (
+    recentResults.length > 0 ? (
       <section>
-        <h2>Recently added</h2>
-        {recent.map((job) => (
-          <a class="job-card" href={`/jobs/${job.slug}`}>
-            <h3>{job.title}</h3>
-            <div class="meta">
-              <span>{job.organization}</span>
-              <span>Posted {job.datePosted}</span>
-              <span class="badge">{job.category || 'general'}</span>
-            </div>
-          </a>
-        ))}
+        <SectionHead title="Latest results" href="/results/" />
+        <div class="stack">
+          {recentResults.map((r) => (
+            <EntryRow
+              href={`/results/${r.slug}`}
+              title={r.title}
+              meta={[r.organization, r.releaseDate ? `Released ${r.releaseDate}` : null]}
+              badge={r.status || 'declared'}
+              badgeTone="open"
+            />
+          ))}
+        </div>
       </section>
     ) : null
   }
 
   {
-    Object.keys(byCategory).length > 0 ? (
+    recentAdmits.length > 0 ? (
       <section>
-        <h2>Browse by category</h2>
-        <p class="meta" style="gap: 8px;">
-          <a class="badge" href="/jobs/">
-            all · {jobs.length}
-          </a>
-          {Object.entries(byCategory)
-            .sort((a, b) => b[1] - a[1])
-            .map(([cat, count]) => (
-              <a class="badge" href={`/jobs/?category=${cat}`}>
-                {cat} · {count}
-              </a>
-            ))}
-        </p>
+        <SectionHead title="Admit cards" href="/admit-cards/" />
+        <div class="stack">
+          {recentAdmits.map((a) => (
+            <EntryRow
+              href={`/admit-cards/${a.slug}`}
+              title={a.title}
+              meta={[a.organization, a.releaseDate ? `Released ${a.releaseDate}` : null]}
+              badge="released"
+              badgeTone="open"
+            />
+          ))}
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    openJobs.length > 0 ? (
+      <section>
+        <SectionHead title="Closing soon" href="/calendar/" linkLabel="Full calendar" />
+        <div class="stack">
+          {openJobs.slice(0, 5).map((job) => {
+            const label = lastDateLabel(job.lastDate);
+            return (
+              <EntryRow
+                href={`/jobs/${job.slug}`}
+                title={job.title}
+                meta={[job.organization, job.lastDate ? `Last date ${job.lastDate}` : null]}
+                badge={label?.text || 'Open'}
+                badgeTone={label?.tone || 'open'}
+              />
+            );
+          })}
+        </div>
       </section>
     ) : null
   }
 
   <section>
-    <h2>How this site stays clean</h2>
-    <div class="band">
-      <p style="margin-bottom: 8px;">
-        <strong>Official sources only.</strong> Every page cites a government domain, and Google
-        News / blog aggregators are blocked by design.
-      </p>
-      <p style="margin-bottom: 8px;">
-        <strong>Minimum detail to publish.</strong> A job listing is published only when dates,
-        eligibility, fee or vacancy details were actually parsed from the source page.
-      </p>
-      <p style="margin-bottom: 0;">
-        <strong>Automatic expiry.</strong> Listings past their last date are removed from the
-        index and stopped from being crawled again.
-      </p>
+    <SectionHead title="Browse by category" href="/categories/" />
+    <div class="cat-grid">
+      {
+        CATEGORIES.filter((c) => c.slug !== 'general' || counts[c.slug]).map((cat) => (
+          <CategoryTile
+            href={`/jobs/category/${cat.slug}/`}
+            label={cat.label}
+            blurb={cat.blurb}
+            count={counts[cat.slug] || 0}
+          />
+        ))
+      }
     </div>
   </section>
 
-  <p class="muted" style="margin-top: 32px; font-size: 14px;">
-    Total tracked: <strong>{totalVacancies.toLocaleString('en-IN')}</strong> vacancies across
-    {jobs.length} notifications.
-  </p>
+  <section>
+    <SectionHead title="How this site stays clean" href="/about/" linkLabel="About us" />
+    <div class="trust-grid">
+      <div class="trust-item">
+        <strong>Official sources only</strong>
+        <p>Every page cites a government domain. News aggregators and blogs are blocked by design.</p>
+      </div>
+      <div class="trust-item">
+        <strong>Detail before publish</strong>
+        <p>A job is published only when dates, eligibility, fee or vacancy details were parsed from the official notice.</p>
+      </div>
+      <div class="trust-item">
+        <strong>Auto expiry</strong>
+        <p>Listings past their last date leave the index and stop being crawled.</p>
+      </div>
+    </div>
+    <p class="muted" style="margin-top: 20px; font-size: 14px;">
+      Tracking <strong>{totalVacancies.toLocaleString('en-IN')}</strong> vacancies across
+      {jobs.length} notifications · updated automatically from official portals.
+    </p>
+  </section>
 </BaseLayout>
+
+<style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .trust-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+
+  .trust-item {
+    background: var(--parchment);
+    border-radius: 14px;
+    padding: 18px 20px;
+  }
+
+  .trust-item strong {
+    display: block;
+    font-size: 16px;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+
+  .trust-item p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.5;
+  }
+</style>

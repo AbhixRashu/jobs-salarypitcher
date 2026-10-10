@@ -1,0 +1,113 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import EntryRow from '../../../components/EntryRow.astro';
+import jobs from '../../../data/jobs.json';
+import { CATEGORIES, categoryBySlug, lastDateLabel } from '../../../lib/categories.mjs';
+
+export function getStaticPaths() {
+  return CATEGORIES.map((cat) => ({
+    params: { slug: cat.slug },
+    props: { cat },
+  }));
+}
+
+const { cat } = Astro.props;
+const today = new Date().toISOString().slice(0, 10);
+const freshSince = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+
+const list = jobs
+  .filter((j) => (j.category || 'general') === cat.slug)
+  .sort((a, b) => {
+    const aOpen = !a.lastDate || a.lastDate >= today;
+    const bOpen = !b.lastDate || b.lastDate >= today;
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    if (aOpen && bOpen) return (a.lastDate || '9999').localeCompare(b.lastDate || '9999');
+    return (b.datePosted || '').localeCompare(a.datePosted || '');
+  });
+
+const openCount = list.filter((j) => !j.lastDate || j.lastDate >= today).length;
+const title = `${cat.label} Jobs`;
+const description = `${cat.blurb} ${list.length} official notifications with eligibility, age limit, vacancy breakdown, fee and dates.`;
+---
+
+<BaseLayout title={title} description={description} canonicalPath={`/jobs/category/${cat.slug}/`}>
+  <h1>{cat.label} jobs</h1>
+  <p class="muted" style="max-width: 64ch;">
+    {cat.blurb} {list.length} notifications · {openCount} open right now.
+  </p>
+
+  <div class="chip-row">
+    <a class="chip" href="/jobs/">All jobs</a>
+    {
+      CATEGORIES.filter((c) => c.slug !== cat.slug && c.slug !== 'general').map((other) => (
+        <a class="chip" href={`/jobs/category/${other.slug}/`}>
+          {other.label}
+        </a>
+      ))
+    }
+  </div>
+
+  {
+    list.length === 0 ? (
+      <p class="notice">
+        No {cat.label.toLowerCase()} notifications published yet. New listings appear here as soon
+        as they pass the official-source detail checks.
+      </p>
+    ) : (
+      <div class="stack">
+        {list.map((job) => {
+          const label = lastDateLabel(job.lastDate);
+          return (
+            <EntryRow
+              href={`/jobs/${job.slug}`}
+              title={job.title}
+              meta={[
+                job.organization,
+                job.vacancies ? `${job.vacancies.toLocaleString('en-IN')} posts` : null,
+                job.lastDate ? `Last date ${job.lastDate}` : `Posted ${job.datePosted || '—'}`,
+              ]}
+              badge={label?.text || 'Open'}
+              badgeTone={label?.tone || 'open'}
+              snippet={job.qualify || null}
+              isNew={Boolean(job.datePosted && job.datePosted >= freshSince)}
+            />
+          );
+        })}
+      </div>
+    )
+  }
+</BaseLayout>
+
+<style>
+  .stack {
+    display: flex;
+    flex-direction: column;
+    margin-top: 8px;
+  }
+
+  .chip-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 24px 0 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--hairline);
+  }
+
+  .chip {
+    display: inline-block;
+    background: var(--parchment);
+    color: var(--ink);
+    border-radius: var(--radius-pill);
+    padding: 6px 14px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  .chip:hover {
+    background: #e8e8ed;
+    color: var(--primary);
+    text-decoration: none;
+  }
+</style>

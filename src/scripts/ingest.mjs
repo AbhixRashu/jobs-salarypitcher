@@ -5,6 +5,7 @@ import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY } from '../con
 import { gateBatch } from '../lib/quality-gates.mjs';
 import { parseRssItems, extractFromRssItem } from '../lib/extract.mjs';
 import { enrichCandidates } from '../lib/details.mjs';
+import { collectFromTableSource } from '../lib/list-source.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DATA_PATH = path.join(ROOT, 'src/data/jobs.json');
@@ -58,9 +59,13 @@ async function fetchWithTimeout(url, ms = 20000) {
 
 async function collectCandidates() {
   const candidates = [];
-  const rssSources = OFFICIAL_SOURCES.filter((s) => s.type === 'rss');
-  for (const source of rssSources) {
+  for (const source of OFFICIAL_SOURCES) {
     try {
+      if (source.type === 'table') {
+        candidates.push(...(await collectFromTableSource(source)));
+        continue;
+      }
+      if (source.type !== 'rss') continue;
       const xml = await fetchWithTimeout(source.url);
       const items = parseRssItems(xml);
       for (const item of items) {

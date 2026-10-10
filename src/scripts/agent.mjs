@@ -5,6 +5,8 @@ import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY, SITE } from '
 import { gateBatch } from '../lib/quality-gates.mjs';
 import { parseRssItems, extractFromRssItem } from '../lib/extract.mjs';
 import { enrichCandidates } from '../lib/details.mjs';
+import { terminateOcrWorker, ocrStats } from '../lib/ocr.mjs';
+import { collectFromTableSource } from '../lib/list-source.mjs';
 import { generateSitemap } from './generate-sitemap.mjs';
 import { pingGoogleIndex } from './index-ping.mjs';
 import { pingIndexNow } from './indexnow.mjs';
@@ -70,20 +72,25 @@ async function fetchRss(url) {
 
 async function collectCandidates() {
   const candidates = [];
-  for (const source of OFFICIAL_SOURCES.filter((s) => s.type === 'rss')) {
+  for (const source of OFFICIAL_SOURCES) {
     try {
-      const xml = await fetchRss(source.url);
-      const items = parseRssItems(xml);
-      let hits = 0;
-      for (const item of items) {
-        const rec = extractFromRssItem(item);
-        if (rec) {
-          rec.sourceId = source.id;
-          candidates.push(rec);
-          hits++;
+      if (source.type === 'rss') {
+        const xml = await fetchRss(source.url);
+        const items = parseRssItems(xml);
+        let hits = 0;
+        for (const item of items) {
+          const rec = extractFromRssItem(item);
+          if (rec) {
+            rec.sourceId = source.id;
+            candidates.push(rec);
+            hits++;
+          }
         }
+        console.log(`[agent] ${source.id}: ${items.length} items -> ${hits} candidates`);
+      } else if (source.type === 'table') {
+        const recs = await collectFromTableSource(source);
+        candidates.push(...recs);
       }
-      console.log(`[agent] ${source.id}: ${items.length} items -> ${hits} candidates`);
     } catch (err) {
       console.error(`[agent] ${source.id} failed: ${err.message}`);
     }
@@ -105,7 +112,14 @@ async function main() {
   const store = loadAll();
   const existingAll = [...store.job, ...store.result, ...store.admit];
 
-  const candidates = await collectCandidates();
+  let candidates = await collectCandidates();
+  const freshCutoff = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
+  const beforeFilter = candidates.length;
+  candidates = candidates.filter((c) => !(c.kind === 'job' && c.datePosted && c.datePosted < freshCutoff));
+  if (beforeFilter !== candidates.length) {
+    console.log(`[agent] dropped ${beforeFilter - candidates.length} jobs older than 150 days (closed, OCR budget saver)`);
+  }
+
   await enrichCandidates(candidates, { max: MAX_PAGES_PER_DAY, prefix: '[agent]' });
   const { accepted, rejected } = gateBatch(candidates, existingAll);
 
@@ -135,6 +149,8 @@ async function main() {
     console.log('[agent] no new urls to index');
   }
 
+  await terminateOcrWorker();
+  console.log(`[agent] ocr: ${JSON.stringify(ocrStats())}`);
   console.log('[agent] done');
 }
 
