@@ -1,0 +1,35 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { OFFICIAL_SOURCES } from '../config/constants.mjs';
+---
+
+<BaseLayout title="Data Sources" description="Every job listing on Jobs SalaryPitcher is sourced from official government portals and notification PDFs. Full transparency list." canonicalPath="/sources/">
+  <h1>Our data sources</h1>
+  <p class="muted">
+    We publish only from official government sources. Every listing page links back to its
+    source — the official portal or notification PDF — so you can verify every detail yourself.
+  </p>
+
+  <table style="margin-top: 1rem;">
+    <thead>
+      <tr><th>Source</th><th>Type</th><th>Link</th></tr>
+    </thead>
+    <tbody>
+      {OFFICIAL_SOURCES.map((s) => (
+        <tr>
+          <td>{s.name}</td>
+          <td><span class="badge">{s.type}</span></td>
+          <td><a href={s.url} rel="nofollow noopener" target="_blank">Visit ↗</a></td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+
+  <h2>How we work</h2>
+  <ul>
+    <li>Extraction only from official portals and official notification PDFs — never news rewrites.</li>
+    <li>Every published page must pass automated quality gates: official-domain citation, valid dates, no placeholders, no duplicates.</li>
+    <li>Expired notifications lose their job markup and are removed from the index promptly.</li>
+    <li>We never accept applications — every apply button goes straight to the government portal.</li>
+  </ul>
+</BaseLayout>

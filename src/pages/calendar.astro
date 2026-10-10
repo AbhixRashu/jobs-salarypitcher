@@ -1,0 +1,36 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import jobs from '../data/jobs.json';
+
+const today = new Date().toISOString().slice(0, 10);
+const withDates = jobs
+  .filter((j) => j.lastDate && j.lastDate >= today)
+  .sort((a, b) => a.lastDate.localeCompare(b.lastDate));
+---
+
+<BaseLayout title="Deadline Calendar" description="Upcoming application deadlines for open government job notifications, sorted by last date." canonicalPath="/calendar/">
+  <h1>Deadline calendar</h1>
+  <p class="muted">Open notifications sorted by application deadline. Missing a deadline is the most common avoidable mistake — check this page weekly.</p>
+
+  {
+    withDates.length === 0 ? (
+      <p class="muted">No open deadlines tracked yet.</p>
+    ) : (
+      <table style="margin-top: 1rem;">
+        <thead>
+          <tr><th>Last date</th><th>Notification</th><th>Organization</th><th>Posts</th></tr>
+        </thead>
+        <tbody>
+          {withDates.map((job) => (
+            <tr>
+              <td>{job.lastDate}</td>
+              <td><a href={`/jobs/${job.slug}`}>{job.shortTitle || job.title}</a></td>
+              <td>{job.organization}</td>
+              <td>{job.vacancies || '—'}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    )
+  }
+</BaseLayout>

@@ -1,0 +1,63 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import admits from '../../data/admit-cards.json';
+import { buildBreadcrumbSchema } from '../../lib/schema.mjs';
+
+export function getStaticPaths() {
+  const today = new Date().toISOString().slice(0, 10);
+  return admits.map((a) => ({
+    params: { slug: a.slug },
+    props: {
+      admit: a,
+      isStale: Boolean(a.examDate && a.examDate < today),
+    },
+  }));
+}
+
+const { admit, isStale } = Astro.props;
+const crumbSchema = buildBreadcrumbSchema([
+  { name: 'Home', href: '/' },
+  { name: 'Admit Cards', href: '/admit-cards/' },
+  { name: admit.title },
+]);
+---
+
+<BaseLayout title={admit.title} description={`${admit.title} — ${admit.organization}. Official admit card / hall ticket announcement with source link.`} canonicalPath={`/admit-cards/${admit.slug}/`} noindex={isStale}>
+  <nav class="meta" style="margin-bottom: 0.75rem;">
+    <a href="/">Home</a> / <a href="/admit-cards/">Admit Cards</a> / {admit.category || 'admit'}
+  </nav>
+
+  <h1>{admit.title}</h1>
+  <p class="meta">
+    <span>{admit.organization}</span>
+    {admit.releaseDate ? <span>Released: {admit.releaseDate}</span> : null}
+    {admit.examDate ? <span>Exam: {admit.examDate}</span> : null}
+    <span class={isStale ? 'badge closed' : 'badge open'}>{isStale ? 'exam over' : 'released'}</span>
+  </p>
+
+  <section class="panel" style="margin: 1rem 0;">
+    <table>
+      <tbody>
+        <tr><th>Organization</th><td>{admit.organization}</td></tr>
+        <tr><th>Release date</th><td>{admit.releaseDate || admit.datePosted || '—'}</td></tr>
+        {admit.examDate ? <tr><th>Exam date</th><td>{admit.examDate}</td></tr> : null}
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Official links</h2>
+    <p>
+      <a class="btn" href={admit.downloadUrl} rel="nofollow noopener" target="_blank">Download from official website ↗</a>
+    </p>
+    <p class="meta">
+      <a href={admit.sourceUrl} rel="nofollow noopener" target="_blank">Source of this listing ↗</a>
+    </p>
+    <p class="muted" style="font-size: 0.9rem;">
+      Download admit cards only from the official portal linked above. Carry a printed copy and
+      a photo ID as per the official instructions.
+    </p>
+  </section>
+
+  <script type="application/ld+json" set:html={JSON.stringify(crumbSchema)} />
+</BaseLayout>

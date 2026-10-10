@@ -1,0 +1,29 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import results from '../../data/results.json';
+
+const sorted = [...results].sort((a, b) => (b.releaseDate || b.datePosted || '').localeCompare(a.releaseDate || a.datePosted || ''));
+---
+
+<BaseLayout title="Exam Results" description="Declared government exam results — merit lists, scorecards and cut-offs, sourced from official announcements." canonicalPath="/results/">
+  <h1>Exam results</h1>
+  <p class="muted">{results.length} declared results tracked from official announcements. <a href="/sources">Our sources</a>.</p>
+
+  {
+    sorted.length === 0 ? (
+      <p class="muted">No results published yet. Run <code>npm run agent</code> to populate from official sources.</p>
+    ) : (
+      sorted.map((r) => (
+        <a class="job-card" href={`/results/${r.slug}`}>
+          <h3>{r.title}</h3>
+          <div class="meta">
+            <span>{r.organization}</span>
+            {r.releaseDate ? <span>Released: {r.releaseDate}</span> : null}
+            <span class="badge open">{r.status || 'declared'}</span>
+            <span class="badge">{r.category || 'result'}</span>
+          </div>
+        </a>
+      ))
+    )
+  }
+</BaseLayout>

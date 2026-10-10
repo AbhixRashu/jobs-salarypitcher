@@ -1,0 +1,55 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import results from '../../data/results.json';
+import { buildBreadcrumbSchema } from '../../lib/schema.mjs';
+
+export function getStaticPaths() {
+  return results.map((r) => ({ params: { slug: r.slug }, props: { result: r } }));
+}
+
+const { result } = Astro.props;
+const crumbSchema = buildBreadcrumbSchema([
+  { name: 'Home', href: '/' },
+  { name: 'Results', href: '/results/' },
+  { name: result.title },
+]);
+---
+
+<BaseLayout title={result.title} description={`${result.title} — ${result.organization}. Official result announcement with source link.`} canonicalPath={`/results/${result.slug}/`}>
+  <nav class="meta" style="margin-bottom: 0.75rem;">
+    <a href="/">Home</a> / <a href="/results/">Results</a> / {result.category || 'result'}
+  </nav>
+
+  <h1>{result.title}</h1>
+  <p class="meta">
+    <span>{result.organization}</span>
+    {result.releaseDate ? <span>Released: {result.releaseDate}</span> : null}
+    <span class="badge open">{result.status || 'declared'}</span>
+  </p>
+
+  <section class="panel" style="margin: 1rem 0;">
+    <table>
+      <tbody>
+        <tr><th>Organization</th><td>{result.organization}</td></tr>
+        <tr><th>Status</th><td>{result.status || 'declared'}</td></tr>
+        <tr><th>Release date</th><td>{result.releaseDate || result.datePosted || '—'}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2>Official links</h2>
+    <p>
+      <a class="btn" href={result.resultUrl} rel="nofollow noopener" target="_blank">View official result ↗</a>
+    </p>
+    <p class="meta">
+      <a href={result.sourceUrl} rel="nofollow noopener" target="_blank">Source of this listing ↗</a>
+    </p>
+    <p class="muted" style="font-size: 0.9rem;">
+      Always verify on the official announcement. {`Jobs SalaryPitcher`} does not host result
+      documents — we link directly to the government source.
+    </p>
+  </section>
+
+  <script type="application/ld+json" set:html={JSON.stringify(crumbSchema)} />
+</BaseLayout>

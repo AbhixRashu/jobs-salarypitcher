@@ -1,0 +1,126 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import jobs from '../../data/jobs.json';
+import { buildJobPostingSchema, buildBreadcrumbSchema } from '../../lib/schema.mjs';
+import { SITE } from '../../config/constants.mjs';
+
+export function getStaticPaths() {
+  const today = new Date().toISOString().slice(0, 10);
+  return jobs.map((job) => ({
+    params: { slug: job.slug },
+    props: {
+      job,
+      isExpired: Boolean(job.lastDate && job.lastDate < today),
+    },
+  }));
+}
+
+const { job, isExpired } = Astro.props;
+const jobSchema = buildJobPostingSchema(job);
+const crumbSchema = buildBreadcrumbSchema([
+  { name: 'Home', href: '/' },
+  { name: 'Jobs', href: '/jobs/' },
+  { name: job.title },
+]);
+const faqSchema = job.faq?.length
+  ? {
+      '@context': 'https://schema.org',
+      '@type': 'FAQPage',
+      mainEntity: job.faq.map((f) => ({
+        '@type': 'Question',
+        name: f.q,
+        acceptedAnswer: { '@type': 'Answer', text: f.a },
+      })),
+    }
+  : null;
+---
+
+<BaseLayout title={job.title} description={`${job.title} — ${job.organization}. Official notification details, eligibility, important dates and application link.`} canonicalPath={`/jobs/${job.slug}/`} noindex={isExpired}>
+  <nav class="meta" style="margin-bottom: 0.75rem;">
+    <a href="/">Home</a> / <a href="/jobs/">Jobs</a> / {job.category || 'notification'}
+  </nav>
+
+  <h1>{job.title}</h1>
+  <p class="meta">
+    <span>{job.organization}</span>
+    {job.vacancies ? <span><strong>{job.vacancies}</strong> vacancies</span> : null}
+    <span class={isExpired ? 'badge closed' : 'badge open'}>{isExpired ? 'Closed' : 'Open'}</span>
+  </p>
+
+  <section class="panel" style="margin: 1rem 0;">
+    <table>
+      <tbody>
+        <tr><th>Post / Role</th><td>{job.shortTitle || job.title}</td></tr>
+        <tr><th>Organization</th><td>{job.organization}</td></tr>
+        {job.category ? <tr><th>Category</th><td>{job.category}</td></tr> : null}
+        {job.state ? <tr><th>State / Region</th><td>{job.state}</td></tr> : null}
+        {job.vacancies ? <tr><th>Total vacancies</th><td>{job.vacancies}</td></tr> : null}
+        {job.qualify ? <tr><th>Eligibility</th><td>{job.qualify}</td></tr> : null}
+        {job.ageMin || job.ageMax ? <tr><th>Age limit</th><td>{job.ageMin || '?'} – {job.ageMax || '?'} years (as per notification)</td></tr> : null}
+        {job.salaryText ? <tr><th>Pay / Salary</th><td>{job.salaryText}</td></tr> : null}
+        {job.payLevel ? <tr><th>Pay level</th><td>{job.payLevel}</td></tr> : null}
+        <tr><th>Notification date</th><td>{job.datePosted || '—'}</td></tr>
+        <tr><th>Application deadline</th><td>{job.lastDate || 'Check official notification'}</td></tr>
+        {job.feeGeneral ? <tr><th>Application fee (General)</th><td>{job.feeGeneral}</td></tr> : null}
+        {job.feeSC_ST ? <tr><th>Application fee (SC/ST)</th><td>{job.feeSC_ST}</td></tr> : null}
+      </tbody>
+    </table>
+  </section>
+
+  {
+    job.description ? (
+      <section>
+        <h2>About this recruitment</h2>
+        <p>{job.description}</p>
+      </section>
+    ) : null
+  }
+
+  {
+    job.howToApply?.length ? (
+      <section>
+        <h2>How to apply</h2>
+        <ol>
+          {job.howToApply.map((step) => (
+            <li>{step}</li>
+          ))}
+        </ol>
+      </section>
+    ) : null
+  }
+
+  <section>
+    <h2>Official links</h2>
+    <p>
+      <a class="btn" href={job.applyUrl} rel="nofollow noopener" target="_blank">Apply on official website</a>
+    </p>
+    <p class="meta">
+      {job.notificationPdf ? (
+        <a href={job.notificationPdf} rel="nofollow noopener" target="_blank">Official notification PDF ↗</a>
+      ) : null}
+      <a href={job.sourceUrl} rel="nofollow noopener" target="_blank">Source of this listing ↗</a>
+    </p>
+    <p class="muted" style="font-size: 0.9rem;">
+      Always verify details on the official notification before applying. {SITE.name} links
+      directly to government portals and does not accept applications itself.
+    </p>
+  </section>
+
+  {
+    job.faq?.length ? (
+      <section>
+        <h2>FAQ</h2>
+        {job.faq.map((item) => (
+          <div style="margin-bottom: 0.9rem;">
+            <strong>{item.q}</strong>
+            <p class="muted" style="margin: 0.2rem 0 0;">{item.a}</p>
+          </div>
+        ))}
+      </section>
+    ) : null
+  }
+
+  <script type="application/ld+json" set:html={JSON.stringify(jobSchema)} />
+  <script type="application/ld+json" set:html={JSON.stringify(crumbSchema)} />
+  {faqSchema ? <script type="application/ld+json" set:html={JSON.stringify(faqSchema)} /> : null}
+</BaseLayout>

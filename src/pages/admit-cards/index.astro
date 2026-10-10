@@ -1,0 +1,30 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import admits from '../../data/admit-cards.json';
+
+const sorted = [...admits].sort((a, b) => (b.releaseDate || b.datePosted || '').localeCompare(a.releaseDate || a.datePosted || ''));
+---
+
+<BaseLayout title="Admit Cards" description="Released government exam admit cards and hall tickets, sourced from official announcements." canonicalPath="/admit-cards/">
+  <h1>Admit cards</h1>
+  <p class="muted">{admits.length} released admit cards tracked from official announcements. <a href="/sources">Our sources</a>.</p>
+
+  {
+    sorted.length === 0 ? (
+      <p class="muted">No admit cards published yet. Run <code>npm run agent</code> to populate from official sources.</p>
+    ) : (
+      sorted.map((a) => (
+        <a class="job-card" href={`/admit-cards/${a.slug}`}>
+          <h3>{a.title}</h3>
+          <div class="meta">
+            <span>{a.organization}</span>
+            {a.releaseDate ? <span>Released: {a.releaseDate}</span> : null}
+            {a.examDate ? <span>Exam: {a.examDate}</span> : null}
+            <span class="badge open">released</span>
+            <span class="badge">{a.category || 'admit'}</span>
+          </div>
+        </a>
+      ))
+    )
+  }
+</BaseLayout>

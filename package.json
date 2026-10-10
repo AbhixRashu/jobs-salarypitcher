@@ -1,0 +1,21 @@
+{
+  "name": "jobs-salarypitcher",
+  "type": "module",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "agent": "node src/scripts/agent.mjs",
+    "ingest": "node src/scripts/agent.mjs",
+    "sitemap": "node src/scripts/generate-sitemap.mjs",
+    "quality": "node src/scripts/quality-audit.mjs",
+    "test:gates": "node src/scripts/test-gates.mjs",
+    "ping:index": "node src/scripts/cli-index-ping.mjs",
+    "ping:indexnow": "node src/scripts/cli-indexnow.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
+  }
+}

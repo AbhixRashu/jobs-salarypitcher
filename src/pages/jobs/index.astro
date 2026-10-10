@@ -1,0 +1,49 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import jobs from '../../data/jobs.json';
+
+const today = new Date().toISOString().slice(0, 10);
+const sorted = [...jobs].sort((a, b) => (b.datePosted || '').localeCompare(a.datePosted || ''));
+const categories = [...new Set(sorted.map((j) => j.category).filter(Boolean))].sort();
+---
+
+<BaseLayout title="All Jobs" description="Complete archive of official government job notifications with eligibility, dates and official apply links." canonicalPath="/jobs/">
+  <h1>All job notifications</h1>
+  <p class="muted">
+    {jobs.length} notifications sourced from official government portals.
+    <a href="/sources">See our sources</a>.
+  </p>
+
+  {
+    categories.length > 0 ? (
+      <p class="meta" style="margin: 1rem 0;">
+        <a class="badge" href="/jobs/">all ({jobs.length})</a>
+        {categories.map((cat) => (
+          <a class="badge" href={`/jobs/?category=${cat}`}>{cat}</a>
+        ))}
+      </p>
+    ) : null
+  }
+
+  {
+    sorted.length === 0 ? (
+      <p class="muted">No notifications published yet. Run <code>npm run ingest</code> to populate from official sources.</p>
+    ) : (
+      sorted.map((job) => {
+        const open = !job.lastDate || job.lastDate >= today;
+        return (
+          <a class="job-card" href={`/jobs/${job.slug}`}>
+            <h3>{job.title}</h3>
+            <div class="meta">
+              <span>{job.organization}</span>
+              {job.vacancies ? <span>{job.vacancies} posts</span> : null}
+              {job.qualify ? <span>{job.qualify}</span> : null}
+              {job.lastDate ? <span>Last date: {job.lastDate}</span> : null}
+              <span class={open ? 'badge open' : 'badge closed'}>{open ? 'Open' : 'Closed'}</span>
+            </div>
+          </a>
+        );
+      })
+    )
+  }
+</BaseLayout>
