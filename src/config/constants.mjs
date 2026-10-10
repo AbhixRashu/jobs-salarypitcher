@@ -39,6 +39,7 @@ export const OFFICIAL_DOMAINS = [
   'opsc.gov.in',
   'psc.ap.gov.in',
   'hssc.gov.in',
+  'hpsc.gov.in',
   'ssc.uk.gov.in',
   'sssb.punjab.gov.in',
   'gov.in',
@@ -102,6 +103,29 @@ export const OFFICIAL_SOURCES = [
     category: 'state',
     categories: ['state'],
   },
+  {
+    id: 'rpsc-results',
+    name: 'Rajasthan Public Service Commission — Results',
+    url: 'https://rpsc.rajasthan.gov.in/results',
+    type: 'results-table',
+    organization: 'RPSC',
+    orgUrl: 'https://rpsc.rajasthan.gov.in',
+    category: 'state',
+    categories: ['state'],
+    limit: 800,
+  },
+  {
+    id: 'hpsc-advertisements',
+    name: 'Haryana Public Service Commission — Advertisements',
+    url: 'http://hpsc.gov.in/en-us/Instructions',
+    type: 'table',
+    organization: 'HPSC',
+    orgUrl: 'http://hpsc.gov.in',
+    applyUrl: 'https://hpsc.gov.in/en-us/ApplyOnline',
+    category: 'state',
+    categories: ['state'],
+    limit: 300,
+  },
 ];
 
 export const ORG_PORTAL = {
@@ -131,3 +155,4 @@ export const CATEGORIES = [
 
 export const MAX_PUBLISH_PER_RUN = 15;
 export const MAX_PAGES_PER_DAY = 40;
+export const MAX_BOOTSTRAP_PUBLISH = 600;

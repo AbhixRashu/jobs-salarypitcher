@@ -1,12 +1,12 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY, SITE } from '../config/constants.mjs';
+import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY, MAX_BOOTSTRAP_PUBLISH, SITE } from '../config/constants.mjs';
 import { gateBatch } from '../lib/quality-gates.mjs';
 import { parseRssItems, extractFromRssItem } from '../lib/extract.mjs';
 import { enrichCandidates } from '../lib/details.mjs';
 import { terminateOcrWorker, ocrStats } from '../lib/ocr.mjs';
-import { collectFromTableSource } from '../lib/list-source.mjs';
+import { collectFromTableSource, collectFromResultsSource, collectFromAnchorSource } from '../lib/list-source.mjs';
 import { generateSitemap } from './generate-sitemap.mjs';
 import { pingGoogleIndex } from './index-ping.mjs';
 import { pingIndexNow } from './indexnow.mjs';
@@ -88,7 +88,13 @@ async function collectCandidates() {
         }
         console.log(`[agent] ${source.id}: ${items.length} items -> ${hits} candidates`);
       } else if (source.type === 'table') {
-        const recs = await collectFromTableSource(source);
+        const recs = await collectFromTableSource(source, source.limit || 40);
+        candidates.push(...recs);
+      } else if (source.type === 'results-table') {
+        const recs = await collectFromResultsSource(source, source.limit || 500);
+        candidates.push(...recs);
+      } else if (source.type === 'anchor-list') {
+        const recs = await collectFromAnchorSource(source, source.limit || 300);
         candidates.push(...recs);
       }
     } catch (err) {
@@ -101,29 +107,41 @@ async function collectCandidates() {
 function sweepExpiry(store) {
   const today = new Date().toISOString().slice(0, 10);
   const cutoff = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  const listRowCutoff = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
   const before = store.job.length;
-  store.job = store.job.filter((j) => !(j.lastDate && j.lastDate < cutoff));
+  store.job = store.job.filter((j) => {
+    if (j.lastDate && j.lastDate < cutoff) return false;
+    if (j.extractionLevel === 'list-row' && j.datePosted && j.datePosted < listRowCutoff) return false;
+    return true;
+  });
   const removed = before - store.job.length;
-  if (removed > 0) console.log(`[agent] expiry sweep: removed ${removed} jobs closed >30 days`);
+  if (removed > 0) console.log(`[agent] expiry sweep: removed ${removed} jobs closed >30 days or stale list-row >365 days`);
 }
 
 async function main() {
-  console.log('[agent] start — jobs + results + admit-cards, official sources only');
+  const bootstrap = process.env.AGENT_BOOTSTRAP === '1';
+  const publishCap = bootstrap ? MAX_BOOTSTRAP_PUBLISH : MAX_PUBLISH_PER_RUN;
+  console.log(`[agent] start — jobs + results + admit-cards, official sources only${bootstrap ? ' (bootstrap mode)' : ''}`);
   const store = loadAll();
   const existingAll = [...store.job, ...store.result, ...store.admit];
 
   let candidates = await collectCandidates();
   const freshCutoff = new Date(Date.now() - 150 * 86400000).toISOString().slice(0, 10);
+  const listRowCutoff = new Date(Date.now() - 365 * 86400000).toISOString().slice(0, 10);
   const beforeFilter = candidates.length;
-  candidates = candidates.filter((c) => !(c.kind === 'job' && c.datePosted && c.datePosted < freshCutoff));
+  candidates = candidates.filter((c) => {
+    if (c.kind !== 'job' || !c.datePosted) return true;
+    const cutoff = c.extractionLevel === 'list-row' ? listRowCutoff : freshCutoff;
+    return c.datePosted >= cutoff;
+  });
   if (beforeFilter !== candidates.length) {
-    console.log(`[agent] dropped ${beforeFilter - candidates.length} jobs older than 150 days (closed, OCR budget saver)`);
+    console.log(`[agent] dropped ${beforeFilter - candidates.length} stale jobs`);
   }
 
   await enrichCandidates(candidates, { max: MAX_PAGES_PER_DAY, prefix: '[agent]' });
   const { accepted, rejected } = gateBatch(candidates, existingAll);
 
-  const capped = accepted.slice(0, MAX_PUBLISH_PER_RUN);
+  const capped = accepted.slice(0, publishCap);
   const newUrls = [];
 
   for (const rec of capped) {

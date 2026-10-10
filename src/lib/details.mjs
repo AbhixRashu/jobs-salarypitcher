@@ -751,7 +751,7 @@ export async function enrichJobFromSource(job) {
 }
 
 export async function enrichCandidates(candidates, { concurrency = 4, max = Infinity, prefix = '[enrich]' } = {}) {
-  const jobs = candidates.filter((c) => c.kind === 'job').slice(0, max);
+  const jobs = candidates.filter((c) => c.kind === 'job' && c.extractionLevel !== 'list-row').slice(0, max);
   if (jobs.length === 0) return candidates;
   const workers = Math.min(concurrency, jobs.length);
   let index = 0;

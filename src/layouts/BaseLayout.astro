@@ -47,7 +47,7 @@ const navItems = [
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@500&display=swap"
       rel="stylesheet"
     />
     <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
@@ -65,8 +65,9 @@ const navItems = [
     </header>
 
     {hasHero ? (
-      <section class="tile-dark hero">
-        <div class="wrap">
+      <section class="hero-band">
+        <div class="hero-mesh" aria-hidden="true"></div>
+        <div class="wrap hero-content">
           <slot name="hero" />
         </div>
       </section>
@@ -95,22 +96,32 @@ const navItems = [
 
     <style is:global>
       :root {
-        --primary: #0066cc;
-        --primary-focus: #0071e3;
-        --primary-on-dark: #2997ff;
-        --ink: #1d1d1f;
-        --muted: #7a7a7a;
-        --canvas: #ffffff;
-        --parchment: #f5f5f7;
-        --pearl: #fafafc;
-        --hairline: rgba(0, 0, 0, 0.08);
-        --divider: #f0f0f0;
-        --tile: #272729;
-        --chip: #e8e8ed;
-        --max: 980px;
-        --radius-card: 18px;
-        --radius-sm: 8px;
-        --radius-pill: 9999px;
+        --primary: #0070f3;
+        --primary-focus: #0761d1;
+        --primary-on-dark: #3291ff;
+        --cta: #171717;
+        --cta-hover: #000000;
+        --ink: #171717;
+        --body: #4d4d4d;
+        --muted: #6f6f6f;
+        --faint: #a1a1a1;
+        --canvas: #fafafa;
+        --elevated: #ffffff;
+        --parchment: #f2f2f2;
+        --pearl: #fafafa;
+        --hairline: #ebebeb;
+        --divider: #f2f2f2;
+        --tile: #171717;
+        --chip: #f2f2f2;
+        --link-soft: #d3e5ff;
+        --warning-soft: #ffefcf;
+        --warning-deep: #ab570a;
+        --error-soft: #fdeced;
+        --error-deep: #c50000;
+        --max: 1000px;
+        --radius-card: 12px;
+        --radius-sm: 6px;
+        --radius-pill: 100px;
       }
 
       * {
@@ -123,13 +134,13 @@ const navItems = [
 
       body {
         margin: 0;
-        background: var(--canvas);
+        background: var(--elevated);
         color: var(--ink);
-        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui,
+        font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui,
           'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-        font-size: 17px;
-        line-height: 1.47;
-        letter-spacing: -0.01em;
+        font-size: 16px;
+        line-height: 1.5;
+        letter-spacing: -0.16px;
         -webkit-font-smoothing: antialiased;
         -moz-osx-font-smoothing: grayscale;
       }
@@ -140,6 +151,7 @@ const navItems = [
       }
 
       a:hover {
+        color: var(--primary-focus);
         text-decoration: underline;
       }
 
@@ -150,7 +162,10 @@ const navItems = [
       }
 
       .global-nav {
-        background: #000;
+        background: rgba(250, 250, 250, 0.86);
+        backdrop-filter: saturate(180%) blur(12px);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        border-bottom: 1px solid var(--hairline);
         position: sticky;
         top: 0;
         z-index: 50;
@@ -161,81 +176,100 @@ const navItems = [
         align-items: center;
         justify-content: space-between;
         gap: 20px;
-        min-height: 44px;
+        min-height: 52px;
         flex-wrap: wrap;
-        padding-top: 6px;
-        padding-bottom: 6px;
+        padding-top: 8px;
+        padding-bottom: 8px;
       }
 
       .brand {
-        color: #fff;
+        color: var(--ink);
         font-weight: 600;
-        font-size: 14px;
-        letter-spacing: -0.12px;
+        font-size: 15px;
+        letter-spacing: -0.32px;
       }
 
       .brand:hover {
-        color: #fff;
+        color: var(--ink);
         text-decoration: none;
       }
 
       .global-nav nav {
         display: flex;
-        gap: 20px;
+        gap: 2px;
         flex-wrap: wrap;
       }
 
       .global-nav nav a {
-        color: rgba(255, 255, 255, 0.88);
-        font-size: 12px;
-        letter-spacing: -0.12px;
+        color: var(--body);
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: -0.28px;
+        border-radius: var(--radius-pill);
+        padding: 6px 12px;
       }
 
       .global-nav nav a:hover {
-        color: #fff;
+        background: var(--parchment);
+        color: var(--ink);
         text-decoration: none;
       }
 
       main {
-        padding: 32px 0 56px;
+        padding: 36px 0 64px;
         min-height: 55vh;
       }
 
-      .tile-dark {
-        background: var(--tile);
-        color: #fff;
+      .hero-band {
+        position: relative;
+        overflow: hidden;
+        background: var(--canvas);
+        border-bottom: 1px solid var(--hairline);
+        padding: 88px 0 80px;
       }
 
-      .tile-dark a {
-        color: var(--primary-on-dark);
+      .hero-content {
+        position: relative;
+        z-index: 1;
       }
 
-      .hero {
-        padding: 80px 0;
+      .hero-mesh {
+        position: absolute;
+        inset: -45% -8% auto -8%;
+        height: 560px;
+        pointer-events: none;
+        opacity: 0.5;
+        filter: blur(90px);
+        background:
+          radial-gradient(38% 58% at 12% 42%, #007cf0 0%, rgba(0, 124, 240, 0) 62%),
+          radial-gradient(32% 52% at 42% 18%, #00dfd8 0%, rgba(0, 223, 216, 0) 62%),
+          radial-gradient(34% 58% at 68% 34%, #7928ca 0%, rgba(121, 40, 202, 0) 62%),
+          radial-gradient(28% 48% at 90% 58%, #ff0080 0%, rgba(255, 0, 128, 0) 62%);
       }
 
       .hero h1 {
-        font-size: 56px;
-        line-height: 1.07;
-        letter-spacing: -0.028em;
+        font-size: 48px;
+        line-height: 1;
+        letter-spacing: -2.4px;
         font-weight: 600;
-        margin: 0 0 16px;
-        max-width: 16ch;
+        margin: 0 0 20px;
+        max-width: 18ch;
+        color: var(--ink);
       }
 
       .hero .lead {
-        font-size: 24px;
-        line-height: 1.4;
+        font-size: 18px;
+        line-height: 1.55;
         font-weight: 400;
-        letter-spacing: 0;
-        color: #d2d2d7;
-        margin: 0 0 24px;
-        max-width: 44ch;
+        letter-spacing: -0.16px;
+        color: var(--body);
+        margin: 0 0 28px;
+        max-width: 56ch;
       }
 
       .hero .hero-actions {
         display: flex;
-        gap: 12px;
+        gap: 10px;
         flex-wrap: wrap;
         align-items: center;
       }
@@ -245,8 +279,8 @@ const navItems = [
         gap: 40px;
         flex-wrap: wrap;
         margin-top: 48px;
-        padding-top: 32px;
-        border-top: 1px solid rgba(255, 255, 255, 0.14);
+        padding-top: 28px;
+        border-top: 1px solid var(--hairline);
       }
 
       .hero .hero-stats div {
@@ -255,40 +289,40 @@ const navItems = [
 
       .hero .hero-stats strong {
         display: block;
-        font-size: 40px;
+        font-size: 36px;
         line-height: 1.1;
         font-weight: 600;
-        letter-spacing: -0.02em;
-        color: #fff;
+        letter-spacing: -1.4px;
+        color: var(--ink);
       }
 
       .hero .hero-stats span {
-        font-size: 14px;
-        color: #a1a1a6;
-        letter-spacing: -0.01em;
+        font-size: 13px;
+        color: var(--muted);
+        letter-spacing: -0.08px;
       }
 
       h1 {
-        font-size: 40px;
-        line-height: 1.1;
+        font-size: 36px;
+        line-height: 1.12;
         font-weight: 600;
-        letter-spacing: -0.02em;
+        letter-spacing: -1.44px;
         margin: 0 0 12px;
       }
 
       h2 {
-        font-size: 28px;
-        line-height: 1.2;
+        font-size: 24px;
+        line-height: 1.25;
         font-weight: 600;
-        letter-spacing: -0.01em;
+        letter-spacing: -0.6px;
         margin: 48px 0 16px;
       }
 
       h3 {
-        font-size: 21px;
-        line-height: 1.3;
+        font-size: 19px;
+        line-height: 1.35;
         font-weight: 600;
-        letter-spacing: 0.01em;
+        letter-spacing: -0.38px;
         margin: 32px 0 8px;
       }
 
@@ -381,27 +415,27 @@ const navItems = [
         display: inline-block;
         background: var(--parchment);
         border-radius: var(--radius-pill);
-        padding: 3px 12px;
-        font-size: 13px;
-        font-weight: 600;
-        color: #333333;
-        letter-spacing: -0.01em;
-        line-height: 1.5;
+        padding: 2px 10px;
+        font-size: 12.5px;
+        font-weight: 500;
+        color: var(--body);
+        letter-spacing: -0.16px;
+        line-height: 1.6;
       }
 
       .badge.open {
         color: var(--primary);
-        background: #e8f1fc;
+        background: var(--link-soft);
       }
 
       .badge.urgent {
-        color: #b3261e;
-        background: #fdecea;
+        color: var(--error-deep);
+        background: var(--error-soft);
       }
 
       .badge.soon {
-        color: #8a5a00;
-        background: #fff4d6;
+        color: var(--warning-deep);
+        background: var(--warning-soft);
       }
 
       .badge.closed {
@@ -467,57 +501,56 @@ const navItems = [
 
       .btn {
         display: inline-block;
-        background: var(--primary);
+        background: var(--cta);
         color: #fff;
-        font-size: 17px;
-        font-weight: 400;
-        letter-spacing: -0.01em;
+        font-size: 15px;
+        font-weight: 500;
+        letter-spacing: -0.32px;
         border-radius: var(--radius-pill);
-        padding: 11px 22px;
+        padding: 9px 18px;
         margin: 8px 0;
-        transition: transform 0.12s ease, background 0.2s ease;
+        border: 1px solid var(--cta);
+        transition: background 0.15s ease, border-color 0.15s ease;
       }
 
       .btn:hover {
-        background: var(--primary-focus);
+        background: var(--cta-hover);
+        border-color: var(--cta-hover);
         color: #fff;
         text-decoration: none;
       }
 
       .btn:active {
-        transform: scale(0.95);
+        transform: translateY(1px);
       }
 
       .btn.secondary {
-        background: transparent;
-        color: var(--primary);
-        border: 1px solid var(--primary);
+        background: var(--elevated);
+        color: var(--ink);
+        border: 1px solid var(--hairline);
       }
 
       .btn.secondary:hover {
-        background: rgba(0, 102, 204, 0.06);
-      }
-
-      .tile-dark .btn.secondary {
-        color: var(--primary-on-dark);
-        border-color: var(--primary-on-dark);
+        background: var(--parchment);
+        color: var(--ink);
       }
 
       code {
-        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-        font-size: 0.9em;
+        font-family: 'Geist Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.88em;
         background: var(--parchment);
         padding: 2px 6px;
         border-radius: 6px;
       }
 
       .site-footer {
-        background: var(--parchment);
+        background: var(--canvas);
+        border-top: 1px solid var(--hairline);
         color: var(--muted);
-        font-size: 12px;
+        font-size: 12.5px;
         line-height: 1.6;
-        letter-spacing: -0.01em;
-        padding: 64px 0;
+        letter-spacing: -0.08px;
+        padding: 56px 0;
         margin-top: 64px;
       }
 
@@ -537,16 +570,17 @@ const navItems = [
       }
 
       @media (max-width: 734px) {
-        .hero {
-          padding: 56px 0;
+        .hero-band {
+          padding: 56px 0 52px;
         }
 
         .hero h1 {
-          font-size: 40px;
+          font-size: 36px;
+          letter-spacing: -1.4px;
         }
 
         .hero .lead {
-          font-size: 20px;
+          font-size: 17px;
         }
 
         .hero .hero-stats {
@@ -555,15 +589,16 @@ const navItems = [
         }
 
         .hero .hero-stats strong {
-          font-size: 32px;
+          font-size: 30px;
         }
 
         h1 {
-          font-size: 34px;
+          font-size: 30px;
+          letter-spacing: -0.9px;
         }
 
         h2 {
-          font-size: 24px;
+          font-size: 22px;
           margin-top: 40px;
         }
 

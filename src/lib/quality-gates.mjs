@@ -59,7 +59,14 @@ export function validateJob(job, existing = []) {
   const failures = [];
   const warnings = [];
   let score = 0;
-  const required = KIND_REQUIRED[job.kind] || KIND_REQUIRED.job;
+  const isListRow = job.extractionLevel === 'list-row';
+  let required = KIND_REQUIRED[job.kind] || KIND_REQUIRED.job;
+  if (isListRow && job.kind === 'job') {
+    // Official list pages often have no parsed last-date or detail tables —
+    // still require title/org/posted/source/apply + official PDF, skip those.
+    required = ['title', 'organization', 'datePosted', 'sourceUrl', 'applyUrl'];
+    if (!job.notificationPdf) failures.push('list-row:missing-notification-pdf');
+  }
 
   for (const field of required) {
     if (!job[field] || String(job[field]).trim().length < 3) {
@@ -109,7 +116,7 @@ export function validateJob(job, existing = []) {
     if (last && last < todayStart) failures.push('dates:expired');
   }
 
-  if (job.kind === 'job') {
+  if (job.kind === 'job' && !isListRow) {
     const sections = detailSectionCount(job);
     if (sections < 3) failures.push(`detail:too-few-sections:${sections}`);
     const hasEligibilityData =
@@ -118,6 +125,8 @@ export function validateJob(job, existing = []) {
       (Array.isArray(job.fee) && job.fee.length > 0) ||
       (Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0);
     if (!hasEligibilityData) failures.push('detail:no-eligibility-data');
+  }
+  if (job.kind === 'job') {
     if (job.extractionLevel === 'rss-title') failures.push('detail:not-enriched-from-source');
     for (const field of ['salaryText', 'payLevel']) {
       if (job[field] && PLACEHOLDER_PATTERNS.some((re) => re.test(String(job[field])))) {
@@ -144,10 +153,21 @@ export function validateJob(job, existing = []) {
   }
 
   const titleTokens = tokens(job.title || '');
+  const normTitle = String(job.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
   for (const prior of existing) {
     if (prior.slug === job.slug) {
       failures.push('duplicate:slug');
       break;
+    }
+    const priorNorm = String(prior.title || '').toLowerCase().replace(/\s+/g, ' ').trim();
+    if (prior.kind === 'result' && job.kind === 'result') {
+      // Result rows for the same exam often differ only by subject in parentheses —
+      // only treat truly identical titles as duplicates.
+      if (priorNorm === normTitle) {
+        failures.push(`duplicate:title-identical:${prior.slug}`);
+        break;
+      }
+      continue;
     }
     const sim = jaccard(titleTokens, tokens(prior.title || ''));
     if (sim > 0.82) {

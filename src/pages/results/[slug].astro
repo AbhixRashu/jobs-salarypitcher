@@ -41,6 +41,11 @@ const crumbSchema = buildBreadcrumbSchema([
     <h2>Official links</h2>
     <p>
       <a class="btn" href={result.resultUrl} rel="nofollow noopener" target="_blank">View official result ↗</a>
+      {result.resultUrls?.slice(1).map((url) => (
+        <a class="btn secondary" href={url} rel="nofollow noopener" target="_blank" style="margin-left: 8px;">
+          Related official PDF ↗
+        </a>
+      ))}
     </p>
     <p class="meta">
       <a href={result.sourceUrl} rel="nofollow noopener" target="_blank">Source of this listing ↗</a>

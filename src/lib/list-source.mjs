@@ -10,7 +10,7 @@ const JOB_HINT_RE = /advt\.?\s*no|advertisement|recruitment|vacanc|posts?\b|enga
 const RESULT_HINT_RE = /result|scorecard|cut[\s-]?off|merit|परिणाम/i;
 const ADMIT_HINT_RE = /admit card|hall ticket|call letter|exam city|प्रवेश पत्र/i;
 
-const DATE_CELL = /^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/;
+const DATE_CELL = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/;
 
 function stripTags(html) {
   return String(html)
@@ -110,11 +110,13 @@ export function candidatesFromTableRows(rows, source) {
     };
 
     if (kind === 'job') {
+      const closed = row.cells.some((c) => /advertisement\s+closed/i.test(c));
       out.push({
         ...base,
         applyUrl: source.applyUrl || source.orgUrl || source.url,
         notificationPdf: /\.pdf(\?|#|$)/i.test(row.href) ? row.href : null,
         extractionLevel: 'list-row',
+        ...(closed && datePosted ? { lastDate: datePosted } : {}),
       });
     } else if (kind === 'result') {
       out.push({
@@ -157,5 +159,157 @@ export async function collectFromTableSource(source, limit = 40) {
   const rows = parseTableList(html, source.url);
   const candidates = candidatesFromTableRows(rows, source).slice(0, limit);
   console.log(`[source] ${source.id}: ${rows.length} rows -> ${candidates.length} candidates`);
+  return candidates;
+}
+
+function isoFromDdMmYyyy(value) {
+  const m = String(value).trim().match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})$/);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  const dd = Number(d);
+  const mm = Number(mo);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
+export function parseResultsTable(html, baseUrl, source) {
+  const out = [];
+  const rowRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+  for (const match of String(html).matchAll(rowRe)) {
+    const inner = match[1];
+    const link = inner.match(/<a\b[^>]*href\s*=\s*["']([^"']+)["']/i);
+    if (!link) continue;
+    const cells = [...inner.matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((c) => stripTags(c[1]));
+    if (cells.length < 3) continue;
+    const dateCell = cells.find((c) => isoFromDdMmYyyy(c));
+    if (!dateCell) continue;
+    let href = link[1].trim();
+    if (!href || href.startsWith('#') || /^javascript:/i.test(href)) continue;
+    try {
+      href = new URL(href, baseUrl).href;
+    } catch {
+      continue;
+    }
+    const textCells = cells.filter((c) => c.length > 8 && !isoFromDdMmYyyy(c) && !/^\d+$/.test(c.trim()));
+    if (textCells.length === 0) continue;
+    const exam = textCells[0];
+    const desc = textCells.find((c) => c !== exam) || exam;
+    const title = desc.length > 20 ? fitTitle([desc]) : fitTitle([exam, desc]);
+    if (title.replace(/[^A-Za-z]/g, '').length < 12) continue;
+    const releaseDate = isoFromDdMmYyyy(dateCell);
+    const slug = slugify(`${source.organization || source.id}-${exam}-${releaseDate}-${title}`);
+    const existing = out.find((c) => c.slug === slug);
+    if (existing) {
+      // Same exam + same description released on the same day — usually
+      // separate PDFs for different subjects/papers. Merge as extra official links.
+      if (Array.isArray(existing.resultUrls) && !existing.resultUrls.includes(href)) {
+        existing.resultUrls.push(href);
+      } else if (!existing.resultUrls) {
+        existing.resultUrls = [existing.resultUrl, href];
+      }
+      continue;
+    }
+    out.push({
+      slug,
+      title: title.slice(0, 118),
+      shortTitle: exam.slice(0, 70),
+      organization: source.organization || source.id,
+      orgUrl: source.orgUrl || source.url,
+      category: source.category || 'state',
+      kind: 'result',
+      releaseDate,
+      datePrecision: 'from-source',
+      status: 'declared',
+      resultUrl: href,
+      sourceUrl: source.url,
+      sourceId: source.id,
+      extractionLevel: 'list-row',
+    });
+  }
+  return out;
+}
+
+export async function collectFromResultsSource(source, limit = 500) {
+  const html = await fetchHtml(source.url, 60000);
+  const candidates = parseResultsTable(html, source.url, source).slice(0, limit);
+  console.log(`[source] ${source.id}: results -> ${candidates.length} candidates`);
+  return candidates;
+}
+
+const FILE_DATE_RE = /(\d{1,2})[_-](\d{1,2})[_-](\d{4})/;
+
+function isoFromFileName(url) {
+  const m = String(url).match(FILE_DATE_RE);
+  if (!m) return null;
+  const [, d, mo, y] = m;
+  const dd = Number(d);
+  const mm = Number(mo);
+  if (mm < 1 || mm > 12 || dd < 1 || dd > 31) return null;
+  return `${y}-${mo.padStart(2, '0')}-${d.padStart(2, '0')}`;
+}
+
+export function parseAnchorList(html, baseUrl, source) {
+  const out = [];
+  const anchorRe = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+  for (const match of String(html).matchAll(anchorRe)) {
+    let href = match[1].trim();
+    const text = stripTags(match[2]);
+    if (!href || href.startsWith('#') || /^javascript:/i.test(href)) continue;
+    if (!/\.pdf(\?|#|$)/i.test(href)) continue;
+    if (text.length < 15) continue;
+    try {
+      href = new URL(href, baseUrl).href;
+    } catch {
+      continue;
+    }
+    if (SKIP_RE.test(text)) continue;
+    const kind = ADMIT_HINT_RE.test(text) ? 'admit' : RESULT_HINT_RE.test(text) ? 'result' : 'job';
+    if (kind !== 'job' && !RESULT_HINT_RE.test(text) && !ADMIT_HINT_RE.test(text)) continue;
+    const title = fitTitle([text]);
+    if (title.replace(/[^A-Za-z]/g, '').length < 12) continue;
+    const datePosted = isoFromFileName(href);
+    const base = {
+      slug: slugify(`${source.organization || source.id}-${title}`),
+      title: title.slice(0, 118),
+      shortTitle: text.slice(0, 70),
+      organization: source.organization || source.id,
+      orgUrl: source.orgUrl || source.url,
+      category: source.category || 'state',
+      datePosted,
+      sourceUrl: href,
+      sourceId: source.id,
+      kind,
+      extractionLevel: 'list-row',
+    };
+    if (kind === 'job') {
+      out.push({
+        ...base,
+        applyUrl: source.applyUrl || source.orgUrl || source.url,
+        notificationPdf: href,
+      });
+    } else if (kind === 'result') {
+      out.push({
+        ...base,
+        releaseDate: datePosted || new Date().toISOString().slice(0, 10),
+        datePrecision: datePosted ? 'from-source' : 'ingest-date',
+        status: 'declared',
+        resultUrl: href,
+      });
+    } else {
+      out.push({
+        ...base,
+        releaseDate: datePosted || new Date().toISOString().slice(0, 10),
+        datePrecision: datePosted ? 'from-source' : 'ingest-date',
+        downloadUrl: href,
+      });
+    }
+  }
+  return out;
+}
+
+export async function collectFromAnchorSource(source, limit = 300) {
+  const html = await fetchHtml(source.url, 30000);
+  const candidates = parseAnchorList(html, source.url, source).slice(0, limit);
+  console.log(`[source] ${source.id}: anchors -> ${candidates.length} candidates`);
   return candidates;
 }
