@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN } from '../config/constants.mjs';
+import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY } from '../config/constants.mjs';
 import { gateBatch } from '../lib/quality-gates.mjs';
 import { parseRssItems, extractFromRssItem } from '../lib/extract.mjs';
+import { enrichCandidates } from '../lib/details.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const DATA_PATH = path.join(ROOT, 'src/data/jobs.json');
@@ -80,7 +81,9 @@ async function collectCandidates() {
 async function main() {
   console.log('[ingest] start — official sources only, Google News RSS is denylisted by design');
   const existing = loadJobs();
-  const candidates = await collectCandidates();
+  const all = await collectCandidates();
+  const candidates = all.filter((c) => c.kind === 'job');
+  await enrichCandidates(candidates, { max: MAX_PAGES_PER_DAY, prefix: '[ingest]' });
   const { accepted, rejected } = gateBatch(candidates, existing);
 
   const capped = accepted.slice(0, MAX_PUBLISH_PER_RUN);

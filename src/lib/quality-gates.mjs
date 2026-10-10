@@ -1,4 +1,5 @@
 import { OFFICIAL_DOMAINS, DENIED_SOURCE_PATTERNS } from '../config/constants.mjs';
+import { detailSectionCount } from './details.mjs';
 
 const PLACEHOLDER_PATTERNS = [
   /check\s+official/i,
@@ -101,6 +102,35 @@ export function validateJob(job, existing = []) {
     if (posted && last && last < posted) failures.push('dates:last-before-posted');
   }
 
+  if (job.kind === 'job') {
+    const sections = detailSectionCount(job);
+    if (sections < 3) failures.push(`detail:too-few-sections:${sections}`);
+    const hasEligibilityData =
+      Boolean(job.qualify) ||
+      Boolean(job.ageLimit && (job.ageLimit.min !== null || job.ageLimit.max !== null)) ||
+      (Array.isArray(job.fee) && job.fee.length > 0) ||
+      (Array.isArray(job.vacancyBreakdown) && job.vacancyBreakdown.length > 0);
+    if (!hasEligibilityData) failures.push('detail:no-eligibility-data');
+    if (job.extractionLevel === 'rss-title') failures.push('detail:not-enriched-from-source');
+    for (const field of ['salaryText', 'payLevel']) {
+      if (job[field] && PLACEHOLDER_PATTERNS.some((re) => re.test(String(job[field])))) {
+        failures.push(`placeholder:${field}`);
+      }
+    }
+    if (Array.isArray(job.vacancyBreakdown)) {
+      for (const row of job.vacancyBreakdown) {
+        if (!row?.post || !Number.isInteger(Number(row.posts)) || Number(row.posts) <= 0) {
+          failures.push('detail:invalid-vacancy-row');
+          break;
+        }
+        if (PLACEHOLDER_PATTERNS.some((re) => re.test(String(row.post)))) {
+          failures.push('placeholder: vacancyBreakdown');
+          break;
+        }
+      }
+    }
+  }
+
   if (job.vacancies !== undefined && job.vacancies !== null) {
     const n = Number(job.vacancies);
     if (!Number.isInteger(n) || n <= 0 || n > 2_000_000) failures.push('vacancies:invalid');
@@ -129,6 +159,7 @@ export function validateJob(job, existing = []) {
     if (job.qualify && job.qualify.length > 20) score += 7;
     if (job.faq && Array.isArray(job.faq) && job.faq.length >= 2) score += 5;
     if (job.vacancies) score += 5;
+    if (job.kind === 'job') score += Math.min(18, detailSectionCount(job) * 3);
     if (job.kind !== 'job') score += 5;
     if (warnings.length > 2) score -= 10;
   }

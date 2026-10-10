@@ -7,16 +7,17 @@ const sorted = [...jobs].sort((a, b) => (b.datePosted || '').localeCompare(a.dat
 const categories = [...new Set(sorted.map((j) => j.category).filter(Boolean))].sort();
 ---
 
-<BaseLayout title="All Jobs" description="Complete archive of official government job notifications with eligibility, dates and official apply links." canonicalPath="/jobs/">
+<BaseLayout title="All Jobs" description="Complete archive of official government job notifications with eligibility, age limit, vacancy breakdown, fee, dates and official apply links." canonicalPath="/jobs/">
   <h1>All job notifications</h1>
-  <p class="muted">
-    {jobs.length} notifications sourced from official government portals.
+  <p class="muted" style="max-width: 62ch;">
+    {jobs.length} notifications sourced from official government portals. Each page carries the
+    parsed detail — dates, vacancy split, eligibility, age limit, fee, pattern and syllabus.
     <a href="/sources">See our sources</a>.
   </p>
 
   {
     categories.length > 0 ? (
-      <p class="meta" style="margin: 1rem 0;">
+      <p class="meta" style="margin: 24px 0;">
         <a class="badge" href="/jobs/">all ({jobs.length})</a>
         {categories.map((cat) => (
           <a class="badge" href={`/jobs/?category=${cat}`}>{cat}</a>
@@ -27,7 +28,10 @@ const categories = [...new Set(sorted.map((j) => j.category).filter(Boolean))].s
 
   {
     sorted.length === 0 ? (
-      <p class="muted">No notifications published yet. Run <code>npm run ingest</code> to populate from official sources.</p>
+      <p class="notice">
+        No notifications published yet. The pipeline only publishes listings that pass the detail
+        checks — run <code>npm run ingest</code> to populate from official sources.
+      </p>
     ) : (
       sorted.map((job) => {
         const open = !job.lastDate || job.lastDate >= today;
@@ -36,11 +40,12 @@ const categories = [...new Set(sorted.map((j) => j.category).filter(Boolean))].s
             <h3>{job.title}</h3>
             <div class="meta">
               <span>{job.organization}</span>
-              {job.vacancies ? <span>{job.vacancies} posts</span> : null}
-              {job.qualify ? <span>{job.qualify}</span> : null}
-              {job.lastDate ? <span>Last date: {job.lastDate}</span> : null}
+              {job.vacancies ? <span>{job.vacancies.toLocaleString('en-IN')} posts</span> : null}
+              {job.lastDate ? <span>Last date {job.lastDate}</span> : null}
+              {job.examDate ? <span>Exam {job.examDate}</span> : null}
               <span class={open ? 'badge open' : 'badge closed'}>{open ? 'Open' : 'Closed'}</span>
             </div>
+            {job.qualify ? <p class="muted" style="margin: 8px 0 0; font-size: 15px;">{job.qualify}</p> : null}
           </a>
         );
       })

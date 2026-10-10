@@ -12,6 +12,15 @@ const {
 const canonical = new URL(canonicalPath, SITE.origin).href;
 const fullTitle = title ? `${title} | ${SITE.name}` : `${SITE.name} — Official Government Job Notifications`;
 const websiteSchema = buildWebSiteSchema();
+const hasHero = Astro.slots.has('hero');
+const navItems = [
+  { href: '/jobs/', label: 'Jobs' },
+  { href: '/results/', label: 'Results' },
+  { href: '/admit-cards/', label: 'Admit Cards' },
+  { href: '/calendar/', label: 'Deadlines' },
+  { href: '/sources/', label: 'Sources' },
+  { href: '/about/', label: 'About' },
+];
 ---
 
 <!doctype html>
@@ -33,131 +42,542 @@ const websiteSchema = buildWebSiteSchema();
     <meta property="og:url" content={canonical} />
     <meta property="og:locale" content="en_IN" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="theme-color" content="#000000" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
     <script type="application/ld+json" set:html={JSON.stringify(websiteSchema)} />
   </head>
   <body>
-    <header class="site-header">
-      <div class="wrap">
+    <header class="global-nav">
+      <div class="wrap nav-inner">
         <a class="brand" href="/">{SITE.name}</a>
         <nav>
-          <a href="/jobs">Jobs</a>
-          <a href="/results">Results</a>
-          <a href="/admit-cards">Admit Cards</a>
-          <a href="/calendar">Deadlines</a>
-          <a href="/sources">Sources</a>
-          <a href="/about">About</a>
+          {navItems.map((item) => (
+            <a href={item.href}>{item.label}</a>
+          ))}
         </nav>
       </div>
     </header>
+
+    {hasHero ? (
+      <section class="tile-dark hero">
+        <div class="wrap">
+          <slot name="hero" />
+        </div>
+      </section>
+    ) : null}
+
     <main class="wrap">
       <slot />
     </main>
+
     <footer class="site-footer">
       <div class="wrap">
+        <p class="footer-lead">{SITE.name}</p>
         <p>
           {SITE.name} aggregates official government recruitment notifications. Always apply
           through the official portal linked on each page. This is a private information service
           and is not affiliated with any government body.
         </p>
-        <p><a href="/sources">Our data sources</a> · <a href="/about">About</a> · <a href="/privacy">Privacy</a></p>
+        <p class="footer-links">
+          <a href="/sources">Our data sources</a> · <a href="/about">About</a> ·
+          <a href="/privacy">Privacy</a>
+        </p>
       </div>
     </footer>
+
     <style is:global>
       :root {
-        --bg: #0e1116;
-        --panel: #161b22;
-        --line: #263041;
-        --text: #e6edf3;
-        --muted: #8b98a9;
-        --accent: #3fb950;
-        --accent-2: #58a6ff;
-        --warn: #d29922;
+        --primary: #0066cc;
+        --primary-focus: #0071e3;
+        --primary-on-dark: #2997ff;
+        --ink: #1d1d1f;
+        --muted: #7a7a7a;
+        --canvas: #ffffff;
+        --parchment: #f5f5f7;
+        --pearl: #fafafc;
+        --hairline: rgba(0, 0, 0, 0.08);
+        --divider: #f0f0f0;
+        --tile: #272729;
+        --chip: #e8e8ed;
+        --max: 980px;
+        --radius-card: 18px;
+        --radius-sm: 8px;
+        --radius-pill: 9999px;
       }
-      * { box-sizing: border-box; }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html {
+        -webkit-text-size-adjust: 100%;
+      }
+
       body {
         margin: 0;
-        font-family: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-        background: var(--bg);
-        color: var(--text);
-        line-height: 1.6;
+        background: var(--canvas);
+        color: var(--ink);
+        font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui,
+          'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-size: 17px;
+        line-height: 1.47;
+        letter-spacing: -0.01em;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
       }
-      a { color: var(--accent-2); text-decoration: none; }
-      a:hover { text-decoration: underline; }
-      .wrap { max-width: 980px; margin: 0 auto; padding: 0 1rem; }
-      .site-header {
-        border-bottom: 1px solid var(--line);
-        background: var(--panel);
+
+      a {
+        color: var(--primary);
+        text-decoration: none;
+      }
+
+      a:hover {
+        text-decoration: underline;
+      }
+
+      .wrap {
+        max-width: var(--max);
+        margin: 0 auto;
+        padding: 0 24px;
+      }
+
+      .global-nav {
+        background: #000;
         position: sticky;
         top: 0;
-        z-index: 10;
+        z-index: 50;
       }
-      .site-header .wrap {
+
+      .nav-inner {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 1rem;
-        min-height: 56px;
+        gap: 20px;
+        min-height: 44px;
+        flex-wrap: wrap;
+        padding-top: 6px;
+        padding-bottom: 6px;
+      }
+
+      .brand {
+        color: #fff;
+        font-weight: 600;
+        font-size: 14px;
+        letter-spacing: -0.12px;
+      }
+
+      .brand:hover {
+        color: #fff;
+        text-decoration: none;
+      }
+
+      .global-nav nav {
+        display: flex;
+        gap: 20px;
         flex-wrap: wrap;
       }
-      .brand { font-weight: 700; color: var(--text); letter-spacing: 0.2px; }
-      .site-header nav { display: flex; gap: 1rem; flex-wrap: wrap; }
-      .site-header nav a { color: var(--muted); font-size: 0.95rem; }
-      .site-header nav a:hover { color: var(--text); }
-      main { padding: 1.5rem 0 3rem; }
-      .site-footer {
-        border-top: 1px solid var(--line);
+
+      .global-nav nav a {
+        color: rgba(255, 255, 255, 0.88);
+        font-size: 12px;
+        letter-spacing: -0.12px;
+      }
+
+      .global-nav nav a:hover {
+        color: #fff;
+        text-decoration: none;
+      }
+
+      main {
+        padding: 32px 0 56px;
+        min-height: 55vh;
+      }
+
+      .tile-dark {
+        background: var(--tile);
+        color: #fff;
+      }
+
+      .tile-dark a {
+        color: var(--primary-on-dark);
+      }
+
+      .hero {
+        padding: 80px 0;
+      }
+
+      .hero h1 {
+        font-size: 56px;
+        line-height: 1.07;
+        letter-spacing: -0.028em;
+        font-weight: 600;
+        margin: 0 0 16px;
+        max-width: 16ch;
+      }
+
+      .hero .lead {
+        font-size: 24px;
+        line-height: 1.4;
+        font-weight: 400;
+        letter-spacing: 0;
+        color: #d2d2d7;
+        margin: 0 0 24px;
+        max-width: 44ch;
+      }
+
+      .hero .hero-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+
+      .hero .hero-stats {
+        display: flex;
+        gap: 40px;
+        flex-wrap: wrap;
+        margin-top: 48px;
+        padding-top: 32px;
+        border-top: 1px solid rgba(255, 255, 255, 0.14);
+      }
+
+      .hero .hero-stats div {
+        min-width: 120px;
+      }
+
+      .hero .hero-stats strong {
+        display: block;
+        font-size: 40px;
+        line-height: 1.1;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        color: #fff;
+      }
+
+      .hero .hero-stats span {
+        font-size: 14px;
+        color: #a1a1a6;
+        letter-spacing: -0.01em;
+      }
+
+      h1 {
+        font-size: 40px;
+        line-height: 1.1;
+        font-weight: 600;
+        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+      }
+
+      h2 {
+        font-size: 28px;
+        line-height: 1.2;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        margin: 48px 0 16px;
+      }
+
+      h3 {
+        font-size: 21px;
+        line-height: 1.3;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin: 32px 0 8px;
+      }
+
+      p {
+        margin: 0 0 16px;
+      }
+
+      .muted {
         color: var(--muted);
-        font-size: 0.9rem;
-        padding: 1.5rem 0 2.5rem;
       }
-      h1 { font-size: 1.7rem; line-height: 1.25; margin: 0 0 0.5rem; }
-      h2 { font-size: 1.25rem; margin: 1.75rem 0 0.75rem; }
-      .muted { color: var(--muted); }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 16px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.43;
+        letter-spacing: -0.01em;
+        align-items: center;
+      }
+
+      .meta a {
+        color: var(--muted);
+      }
+
+      .meta a:hover {
+        color: var(--primary);
+      }
+
+      .meta strong {
+        color: var(--ink);
+        font-weight: 600;
+      }
+
       .panel {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 1rem 1.1rem;
+        background: var(--canvas);
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius-card);
+        padding: 24px;
       }
+
+      .panel + .panel {
+        margin-top: 16px;
+      }
+
+      .band {
+        background: var(--parchment);
+        border-radius: var(--radius-card);
+        padding: 24px;
+      }
+
+      .notice {
+        background: var(--parchment);
+        border-radius: var(--radius-card);
+        padding: 16px 20px;
+        font-size: 14px;
+        line-height: 1.5;
+        color: var(--muted);
+        letter-spacing: -0.01em;
+      }
+
       .job-card {
         display: block;
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 10px;
-        padding: 1rem 1.1rem;
-        margin-bottom: 0.75rem;
+        background: var(--canvas);
+        border: 1px solid var(--hairline);
+        border-radius: var(--radius-card);
+        padding: 20px 24px;
+        margin-bottom: 16px;
         color: inherit;
+        transition: border-color 0.2s ease;
       }
-      .job-card:hover { border-color: var(--accent-2); text-decoration: none; }
-      .job-card h3 { margin: 0 0 0.35rem; font-size: 1.05rem; color: var(--text); }
-      .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; color: var(--muted); font-size: 0.9rem; }
+
+      .job-card:hover {
+        border-color: var(--primary);
+        text-decoration: none;
+      }
+
+      .job-card h3 {
+        margin: 0 0 6px;
+        font-size: 21px;
+        letter-spacing: -0.01em;
+      }
+
+      .job-card:hover h3 {
+        color: var(--primary);
+      }
+
       .badge {
         display: inline-block;
-        border: 1px solid var(--line);
-        border-radius: 999px;
-        padding: 0.05rem 0.6rem;
-        font-size: 0.78rem;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
+        background: var(--parchment);
+        border-radius: var(--radius-pill);
+        padding: 3px 12px;
+        font-size: 13px;
+        font-weight: 600;
+        color: #333333;
+        letter-spacing: -0.01em;
+        line-height: 1.5;
       }
-      .badge.open { color: var(--accent); border-color: var(--accent); }
-      .badge.closed { color: var(--warn); border-color: var(--warn); }
-      table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
-      th, td { text-align: left; padding: 0.55rem 0.6rem; border-bottom: 1px solid var(--line); }
-      th { color: var(--muted); font-weight: 600; }
+
+      .badge.open {
+        color: var(--primary);
+        background: #e8f1fc;
+      }
+
+      .badge.closed {
+        color: var(--muted);
+        background: var(--parchment);
+      }
+
+      .table-scroll {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 17px;
+        letter-spacing: -0.01em;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 12px 0;
+        border-bottom: 1px solid var(--divider);
+        vertical-align: top;
+      }
+
+      th {
+        width: 40%;
+        padding-right: 20px;
+        color: var(--muted);
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1.43;
+      }
+
+      tr:last-child th,
+      tr:last-child td {
+        border-bottom: none;
+      }
+
+      thead th {
+        border-bottom: 1px solid var(--hairline);
+        color: var(--ink);
+        width: auto;
+        padding-top: 0;
+      }
+
+      thead + tbody tr:first-child th,
+      thead + tbody tr:first-child td {
+        padding-top: 12px;
+      }
+
+      ol,
+      ul {
+        margin: 0 0 16px;
+        padding-left: 22px;
+      }
+
+      li {
+        margin-bottom: 8px;
+      }
+
       .btn {
         display: inline-block;
-        background: var(--accent);
-        color: #04150a;
-        font-weight: 700;
-        border-radius: 8px;
-        padding: 0.55rem 1rem;
-        margin: 0.5rem 0;
+        background: var(--primary);
+        color: #fff;
+        font-size: 17px;
+        font-weight: 400;
+        letter-spacing: -0.01em;
+        border-radius: var(--radius-pill);
+        padding: 11px 22px;
+        margin: 8px 0;
+        transition: transform 0.12s ease, background 0.2s ease;
       }
-      .btn:hover { text-decoration: none; filter: brightness(1.05); }
-      .btn.secondary { background: transparent; color: var(--accent-2); border: 1px solid var(--accent-2); }
+
+      .btn:hover {
+        background: var(--primary-focus);
+        color: #fff;
+        text-decoration: none;
+      }
+
+      .btn:active {
+        transform: scale(0.95);
+      }
+
+      .btn.secondary {
+        background: transparent;
+        color: var(--primary);
+        border: 1px solid var(--primary);
+      }
+
+      .btn.secondary:hover {
+        background: rgba(0, 102, 204, 0.06);
+      }
+
+      .tile-dark .btn.secondary {
+        color: var(--primary-on-dark);
+        border-color: var(--primary-on-dark);
+      }
+
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: 0.9em;
+        background: var(--parchment);
+        padding: 2px 6px;
+        border-radius: 6px;
+      }
+
+      .site-footer {
+        background: var(--parchment);
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.6;
+        letter-spacing: -0.01em;
+        padding: 64px 0;
+        margin-top: 64px;
+      }
+
+      .site-footer a {
+        color: var(--primary);
+      }
+
+      .footer-lead {
+        color: var(--ink);
+        font-size: 14px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .footer-links {
+        margin-top: 16px;
+      }
+
+      @media (max-width: 734px) {
+        .hero {
+          padding: 56px 0;
+        }
+
+        .hero h1 {
+          font-size: 40px;
+        }
+
+        .hero .lead {
+          font-size: 20px;
+        }
+
+        .hero .hero-stats {
+          gap: 24px;
+          margin-top: 32px;
+        }
+
+        .hero .hero-stats strong {
+          font-size: 32px;
+        }
+
+        h1 {
+          font-size: 34px;
+        }
+
+        h2 {
+          font-size: 24px;
+          margin-top: 40px;
+        }
+
+        th {
+          width: 44%;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .hero h1 {
+          font-size: 32px;
+        }
+
+        h1 {
+          font-size: 28px;
+        }
+
+        .nav-inner {
+          justify-content: center;
+        }
+
+        .panel,
+        .job-card {
+          padding: 18px;
+        }
+      }
     </style>
   </body>
 </html>

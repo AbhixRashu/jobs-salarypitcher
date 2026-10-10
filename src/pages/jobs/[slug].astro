@@ -15,6 +15,15 @@ export function getStaticPaths() {
   }));
 }
 
+const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function fmt(value) {
+  if (!value) return null;
+  const m = String(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return String(value);
+  return `${Number(m[3])} ${MONTH_SHORT[Number(m[2]) - 1]} ${m[1]}`;
+}
+
 const { job, isExpired } = Astro.props;
 const jobSchema = buildJobPostingSchema(job);
 const crumbSchema = buildBreadcrumbSchema([
@@ -33,39 +42,314 @@ const faqSchema = job.faq?.length
       })),
     }
   : null;
+
+const age = job.ageLimit || null;
+const feeRows = job.fee?.length
+  ? job.fee
+  : [
+      job.feeGeneral ? { category: 'General / OBC', amount: job.feeGeneral } : null,
+      job.feeSC_ST ? { category: 'SC / ST', amount: job.feeSC_ST } : null,
+    ].filter(Boolean);
+
+const lastDateLabel = fmt(job.lastDate);
+const totalPosts = job.vacancyBreakdown?.reduce((sum, row) => sum + (Number(row.posts) || 0), 0) || null;
+
+const quickFacts = [
+  { label: 'Total vacancies', value: job.vacancies ? job.vacancies.toLocaleString('en-IN') : totalPosts ? totalPosts.toLocaleString('en-IN') : null },
+  { label: 'Last date to apply', value: lastDateLabel },
+  { label: 'Examination date', value: fmt(job.examDate) },
+  { label: 'Exam timing', value: job.examTiming || null },
+  { label: 'Qualification', value: job.qualify ? (job.qualify.length > 140 ? `${job.qualify.slice(0, 140)}…` : job.qualify) : null },
+  {
+    label: 'Age limit',
+    value: age && (age.min || age.max) ? `${age.min ?? '—'} – ${age.max ?? '—'} years` : job.ageMin || job.ageMax ? `${job.ageMin ?? '?'} – ${job.ageMax ?? '?'} years` : null,
+  },
+  { label: 'Pay / Salary', value: job.salaryText || null },
+  { label: 'Pay level', value: job.payLevel || null },
+].filter((row) => row.value);
 ---
 
-<BaseLayout title={job.title} description={`${job.title} — ${job.organization}. Official notification details, eligibility, important dates and application link.`} canonicalPath={`/jobs/${job.slug}/`} noindex={isExpired}>
-  <nav class="meta" style="margin-bottom: 0.75rem;">
+<BaseLayout
+  title={job.title}
+  description={`${job.title} — ${job.organization}. Official notification details: eligibility, age limit, vacancy breakdown, fee, important dates, exam pattern and syllabus.`}
+  canonicalPath={`/jobs/${job.slug}/`}
+  noindex={isExpired}
+>
+  <nav class="meta" style="margin-bottom: 16px;">
     <a href="/">Home</a> / <a href="/jobs/">Jobs</a> / {job.category || 'notification'}
   </nav>
 
   <h1>{job.title}</h1>
-  <p class="meta">
-    <span>{job.organization}</span>
-    {job.vacancies ? <span><strong>{job.vacancies}</strong> vacancies</span> : null}
+  <p class="meta" style="margin-bottom: 24px;">
+    <span><strong>{job.organization}</strong></span>
+    {job.category ? <span class="badge">{job.category}</span> : null}
+    {job.vacancies ? <span><strong>{job.vacancies.toLocaleString('en-IN')}</strong> vacancies</span> : null}
     <span class={isExpired ? 'badge closed' : 'badge open'}>{isExpired ? 'Closed' : 'Open'}</span>
+    {job.datePosted ? <span>Posted {fmt(job.datePosted)}</span> : null}
   </p>
 
-  <section class="panel" style="margin: 1rem 0;">
-    <table>
-      <tbody>
-        <tr><th>Post / Role</th><td>{job.shortTitle || job.title}</td></tr>
-        <tr><th>Organization</th><td>{job.organization}</td></tr>
-        {job.category ? <tr><th>Category</th><td>{job.category}</td></tr> : null}
-        {job.state ? <tr><th>State / Region</th><td>{job.state}</td></tr> : null}
-        {job.vacancies ? <tr><th>Total vacancies</th><td>{job.vacancies}</td></tr> : null}
-        {job.qualify ? <tr><th>Eligibility</th><td>{job.qualify}</td></tr> : null}
-        {job.ageMin || job.ageMax ? <tr><th>Age limit</th><td>{job.ageMin || '?'} – {job.ageMax || '?'} years (as per notification)</td></tr> : null}
-        {job.salaryText ? <tr><th>Pay / Salary</th><td>{job.salaryText}</td></tr> : null}
-        {job.payLevel ? <tr><th>Pay level</th><td>{job.payLevel}</td></tr> : null}
-        <tr><th>Notification date</th><td>{job.datePosted || '—'}</td></tr>
-        <tr><th>Application deadline</th><td>{job.lastDate || 'Check official notification'}</td></tr>
-        {job.feeGeneral ? <tr><th>Application fee (General)</th><td>{job.feeGeneral}</td></tr> : null}
-        {job.feeSC_ST ? <tr><th>Application fee (SC/ST)</th><td>{job.feeSC_ST}</td></tr> : null}
-      </tbody>
-    </table>
-  </section>
+  {
+    quickFacts.length ? (
+      <section class="panel" style="margin-bottom: 32px;">
+        <table>
+          <tbody>
+            {quickFacts.map((row) => (
+              <tr>
+                <th>{row.label}</th>
+                <td>{row.value}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </section>
+    ) : null
+  }
+
+  {
+    job.importantDates?.length ? (
+      <section>
+        <h2>Important dates</h2>
+        <div class="panel table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Event</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {job.importantDates.map((row) => (
+                <tr>
+                  <td>{row.label}</td>
+                  <td>{fmt(row.date)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    job.vacancyBreakdown?.length ? (
+      <section>
+        <h2>Vacancy breakdown</h2>
+        <div class="panel table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Post</th>
+                <th style="text-align: right;">Vacancies</th>
+              </tr>
+            </thead>
+            <tbody>
+              {job.vacancyBreakdown.map((row) => (
+                <tr>
+                  <td>{row.post}</td>
+                  <td style="text-align: right;">{Number(row.posts).toLocaleString('en-IN')}</td>
+                </tr>
+              ))}
+              {totalPosts && totalPosts !== job.vacancies ? (
+                <tr>
+                  <td>
+                    <strong>Total</strong>
+                  </td>
+                  <td style="text-align: right;">
+                    <strong>{totalPosts.toLocaleString('en-IN')}</strong>
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    job.qualify || job.qualificationNotes?.length || age || feeRows.length || job.salaryText || job.payLevel ? (
+      <section>
+        <h2>Eligibility, age limit and fee</h2>
+        <div class="panel table-scroll">
+          <table>
+            <tbody>
+              {job.qualify ? (
+                <tr>
+                  <th>Educational qualification</th>
+                  <td>{job.qualify}</td>
+                </tr>
+              ) : null}
+              {age && (age.min || age.max) ? (
+                <tr>
+                  <th>Age limit</th>
+                  <td>
+                    {age.min ?? '—'} to {age.max ?? '—'} years
+                    {age.asOn ? ` (${age.asOn})` : ''}
+                  </td>
+                </tr>
+              ) : null}
+              {feeRows.length ? (
+                <tr>
+                  <th>Application fee</th>
+                  <td>
+                    {feeRows.map((row) => (
+                      <span style="display: block;">
+                        {row.category}: {row.amount}
+                      </span>
+                    ))}
+                  </td>
+                </tr>
+              ) : null}
+              {job.salaryText ? (
+                <tr>
+                  <th>Pay / salary</th>
+                  <td>{job.salaryText}</td>
+                </tr>
+              ) : null}
+              {job.payLevel ? (
+                <tr>
+                  <th>Pay level</th>
+                  <td>{job.payLevel}</td>
+                </tr>
+              ) : null}
+              {job.state ? (
+                <tr>
+                  <th>State / region</th>
+                  <td>{job.state}</td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        {age?.relaxation?.length ? (
+          <div class="panel table-scroll" style="margin-top: 16px;">
+            <table>
+              <thead>
+                <tr>
+                  <th>Category</th>
+                  <th>Age relaxation</th>
+                </tr>
+              </thead>
+              <tbody>
+                {age.relaxation.map((row) => (
+                  <tr>
+                    <td>{row.category}</td>
+                    <td>+{row.years} years</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+
+        {job.qualificationNotes?.length > 1 ? (
+          <div class="panel" style="margin-top: 16px;">
+            <table>
+              <tbody>
+                {job.qualificationNotes.map((note, i) => (
+                  <tr>
+                    <th>Requirement {i + 1}</th>
+                    <td>{note}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : null}
+      </section>
+    ) : null
+  }
+
+  {
+    job.examPattern?.length ? (
+      <section>
+        <h2>Exam pattern</h2>
+        <div class="panel table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Stage / paper</th>
+                <th>Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {job.examPattern.map((row) => (
+                <tr>
+                  <td>{row.stage}</td>
+                  <td>{row.detail}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    job.syllabus?.length ? (
+      <section>
+        <h2>Syllabus</h2>
+        {job.syllabus.map((group) => (
+          <div class="panel" style="margin-bottom: 16px;">
+            <h3 style="margin-top: 0;">{group.section}</h3>
+            <ul style="margin-bottom: 0;">
+              {group.topics.map((topic) => (
+                <li>{topic}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </section>
+    ) : null
+  }
+
+  {
+    job.selectionProcess?.length ? (
+      <section>
+        <h2>Selection process</h2>
+        <div class="panel">
+          <ol style="margin-bottom: 0;">
+            {job.selectionProcess.map((stage) => (
+              <li>{stage}</li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    job.howToApply?.length ? (
+      <section>
+        <h2>How to apply</h2>
+        <div class="panel">
+          <ol style="margin-bottom: 0;">
+            {job.howToApply.map((step) => (
+              <li>{step}</li>
+            ))}
+          </ol>
+        </div>
+      </section>
+    ) : null
+  }
+
+  {
+    job.documents?.length ? (
+      <section>
+        <h2>Documents required</h2>
+        <div class="panel">
+          <ul style="margin-bottom: 0; columns: 2; column-gap: 32px;">
+            {job.documents.map((doc) => (
+              <li>{doc}</li>
+            ))}
+          </ul>
+        </div>
+      </section>
+    ) : null
+  }
 
   {
     job.description ? (
@@ -76,31 +360,22 @@ const faqSchema = job.faq?.length
     ) : null
   }
 
-  {
-    job.howToApply?.length ? (
-      <section>
-        <h2>How to apply</h2>
-        <ol>
-          {job.howToApply.map((step) => (
-            <li>{step}</li>
-          ))}
-        </ol>
-      </section>
-    ) : null
-  }
-
   <section>
     <h2>Official links</h2>
     <p>
       <a class="btn" href={job.applyUrl} rel="nofollow noopener" target="_blank">Apply on official website</a>
+      {job.notificationPdf ? (
+        <a class="btn secondary" href={job.notificationPdf} rel="nofollow noopener" target="_blank">
+          Official notification PDF
+        </a>
+      ) : null}
     </p>
     <p class="meta">
-      {job.notificationPdf ? (
-        <a href={job.notificationPdf} rel="nofollow noopener" target="_blank">Official notification PDF ↗</a>
-      ) : null}
       <a href={job.sourceUrl} rel="nofollow noopener" target="_blank">Source of this listing ↗</a>
+      {job.extractionLevel ? <span>Extracted from: {job.extractionLevel}</span> : null}
+      {job.qualityScore ? <span>Quality score: {job.qualityScore}</span> : null}
     </p>
-    <p class="muted" style="font-size: 0.9rem;">
+    <p class="notice" style="margin-top: 16px;">
       Always verify details on the official notification before applying. {SITE.name} links
       directly to government portals and does not accept applications itself.
     </p>
@@ -111,9 +386,9 @@ const faqSchema = job.faq?.length
       <section>
         <h2>FAQ</h2>
         {job.faq.map((item) => (
-          <div style="margin-bottom: 0.9rem;">
+          <div class="panel" style="margin-bottom: 12px;">
             <strong>{item.q}</strong>
-            <p class="muted" style="margin: 0.2rem 0 0;">{item.a}</p>
+            <p class="muted" style="margin: 6px 0 0;">{item.a}</p>
           </div>
         ))}
       </section>

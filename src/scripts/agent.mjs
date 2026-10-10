@@ -1,9 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, SITE } from '../config/constants.mjs';
+import { OFFICIAL_SOURCES, MAX_PUBLISH_PER_RUN, MAX_PAGES_PER_DAY, SITE } from '../config/constants.mjs';
 import { gateBatch } from '../lib/quality-gates.mjs';
 import { parseRssItems, extractFromRssItem } from '../lib/extract.mjs';
+import { enrichCandidates } from '../lib/details.mjs';
 import { generateSitemap } from './generate-sitemap.mjs';
 import { pingGoogleIndex } from './index-ping.mjs';
 import { pingIndexNow } from './indexnow.mjs';
@@ -105,6 +106,7 @@ async function main() {
   const existingAll = [...store.job, ...store.result, ...store.admit];
 
   const candidates = await collectCandidates();
+  await enrichCandidates(candidates, { max: MAX_PAGES_PER_DAY, prefix: '[agent]' });
   const { accepted, rejected } = gateBatch(candidates, existingAll);
 
   const capped = accepted.slice(0, MAX_PUBLISH_PER_RUN);

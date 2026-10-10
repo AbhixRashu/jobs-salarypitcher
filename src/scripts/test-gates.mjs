@@ -11,9 +11,42 @@ const passJob = {
   vacancies: 2536,
   datePosted: '2026-10-01',
   lastDate: '2026-11-07',
-  qualify: '12th pass from a recognized board',
   applyUrl: 'https://ssc.gov.in',
   sourceUrl: 'https://ssc.gov.in',
+  extractionLevel: 'page-detail',
+  importantDates: [
+    { label: 'Online application starts', date: '2026-10-01' },
+    { label: 'Last date for submission of online application', date: '2026-11-07' },
+    { label: 'Date of Tier 1 examination', date: '2026-12-15' },
+  ],
+  vacancyBreakdown: [
+    { post: 'Lower Division Clerk', posts: 1800 },
+    { post: 'Postal Assistant', posts: 736 },
+  ],
+  qualify: '12th pass from a recognized board with typing speed of 35 wpm in English.',
+  ageLimit: {
+    min: 18,
+    max: 27,
+    relaxation: [{ category: 'OBC', years: 3 }, { category: 'SC', years: 5 }],
+    asOn: null,
+  },
+  fee: [
+    { category: 'General / OBC', amount: '₹100' },
+    { category: 'SC / ST / PwD', amount: 'Nil' },
+  ],
+  selectionProcess: [
+    'Tier 1 computer based examination',
+    'Tier 2 computer based examination',
+    'Document verification and skill test',
+  ],
+  howToApply: [
+    'Complete one-time registration on the official portal',
+    'Fill the online application form and upload photograph and signature',
+    'Pay the application fee online and submit before the last date',
+  ],
+  documents: ['10th mark sheet', '12th mark sheet', 'Photo identity proof'],
+  salaryText: 'Pay Level 2, ₹19,900 – ₹63,200 per month',
+  payLevel: 'Level 2',
 };
 
 const passResult = {
@@ -85,8 +118,21 @@ const rejectResultNoUrl = {
   sourceUrl: 'https://ssc.gov.in',
 };
 
+const rejectThinDetail = {
+  slug: 'test-no-detail',
+  kind: 'job',
+  title: 'Test Recruitment Notice For Data Entry Operators 2026',
+  organization: 'SSC',
+  category: 'ssc',
+  datePosted: '2026-10-01',
+  lastDate: '2026-11-01',
+  applyUrl: 'https://ssc.gov.in',
+  sourceUrl: 'https://ssc.gov.in',
+  extractionLevel: 'rss-title',
+};
+
 const { accepted, rejected } = gateBatch(
-  [passJob, passResult, passAdmit, rejectPlaceholder, rejectNewsSource, rejectThin, rejectResultNoUrl],
+  [passJob, passResult, passAdmit, rejectPlaceholder, rejectNewsSource, rejectThin, rejectThinDetail, rejectResultNoUrl],
   []
 );
 
@@ -116,14 +162,55 @@ for (const rec of extracted) {
       : 'filtered out: (no kind/org match)'
   );
 }
-
 const kinds = extracted.filter(Boolean).map((r) => r.kind).sort().join(',');
+
+console.log('\n--- DETAIL PARSER TEST ---');
+const sampleHtml = `
+<html><body>
+<h2>Important Dates</h2>
+<p>Last date for submission of online application: 25.12.2026</p>
+<p>Date of examination: 15.02.2027</p>
+<h2>Vacancy Details</h2>
+<table>
+<tr><th>Post</th><th>Vacancies</th></tr>
+<tr><td>Clerk</td><td>120</td></tr>
+<tr><td>Assistant</td><td>80</td></tr>
+</table>
+<h2>Educational Qualification</h2>
+<p>Candidates must have passed 12th pass from a recognized board with computer knowledge.</p>
+<h2>Age Limit</h2>
+<p>Minimum age 18 years and maximum 27 years as on 01.01.2027. OBC candidates get relaxation of 3 years and SC/ST candidates get relaxation of 5 years.</p>
+<h2>Application Fee</h2>
+<p>General/OBC: Rs 100. SC/ST: Nil.</p>
+<h2>Selection Process</h2>
+<p>Selection will be based on Tier 1 examination, Tier 2 examination and document verification.</p>
+<h2>How to Apply</h2>
+<ol><li>Register on the official website.</li><li>Fill the application form and upload documents.</li><li>Pay the fee and submit before the last date.</li></ol>
+</body></html>`;
+
+const { htmlToText, parseJobDetails } = await import('../lib/details.mjs');
+const parsed = parseJobDetails(htmlToText(sampleHtml));
+const detailOk = {
+  dates: parsed.importantDates?.length >= 2,
+  vacancy: parsed.vacancyBreakdown?.length === 2 && parsed.vacancyBreakdown[0].post === 'Clerk',
+  qualify: /12th/i.test(parsed.qualify || ''),
+  age: parsed.ageLimit?.min === 18 && parsed.ageLimit?.max === 27 && parsed.ageLimit?.relaxation?.length >= 2,
+  fee: parsed.fee?.length >= 2,
+  selection: parsed.selectionProcess?.length >= 2,
+  apply: parsed.howToApply?.length >= 2,
+};
+for (const [k, v] of Object.entries(detailOk)) console.log(`parse ${k}: ${v ? 'ok' : 'FAIL'}`);
+
 const allPass =
   accepted.length === 3 &&
   accepted.some((j) => j.slug === passJob.slug) &&
   accepted.some((j) => j.slug === passResult.slug) &&
   accepted.some((j) => j.slug === passAdmit.slug) &&
-  rejected.length === 4 &&
+  rejected.length === 5 &&
+  rejected.some(
+    (r) => r.job.slug === rejectThinDetail.slug && r.result.failures.some((f) => f.startsWith('detail:'))
+  ) &&
+  Object.values(detailOk).every(Boolean) &&
   kinds === 'job,result';
 
 console.log(`\n${allPass ? 'ALL TESTS PASSED' : 'TEST FAILURE'} (extracted kinds: ${kinds || 'none'})`);
