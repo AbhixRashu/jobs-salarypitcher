@@ -254,21 +254,5 @@
     "notificationPdf": "http://hpsc.gov.in/Portals/0/Ann_Bif_post_Assistant_Director_IndustrialSafety_20_11_2025.pdf",
     "extractionLevel": "list-row",
     "qualityScore": 80
-  },
-  {
-    "slug": "hpsc-announcement-regarding-revised-bifurcation-of-posts-of-assistant-professor",
-    "title": "Announcement regarding revised bifurcation of posts of Assistant Professor (College Cadre) in various subjects in…",
-    "shortTitle": "Announcement regarding revised bifurcation of posts of Assistant Profe",
-    "organization": "HPSC",
-    "orgUrl": "http://hpsc.gov.in",
-    "category": "state",
-    "datePosted": "2025-10-10",
-    "sourceUrl": "http://hpsc.gov.in/Portals/0/Ann_Bif_AP_Advt_42to67_2024_10_10_2025.pdf",
-    "sourceId": "hpsc-advertisements",
-    "kind": "job",
-    "applyUrl": "https://hpsc.gov.in/en-us/ApplyOnline",
-    "notificationPdf": "http://hpsc.gov.in/Portals/0/Ann_Bif_AP_Advt_42to67_2024_10_10_2025.pdf",
-    "extractionLevel": "list-row",
-    "qualityScore": 80
   }
 ]
