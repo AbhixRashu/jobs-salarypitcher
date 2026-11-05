@@ -12224,5 +12224,22 @@
       "https://rpsc.rajasthan.gov.in/Static/Result/26D74361E8864DFB9E4A1A22AFFF775A.pdf"
     ],
     "qualityScore": 75
+  },
+  {
+    "slug": "indian-armed-forces-result-i-2026",
+    "title": "राष्ट्रीय रक्षा अकादमी और नौसेना अकादमी परीक्षा (I), 2026 – अंतिम परिणाम की घोषणा",
+    "shortTitle": "राष्ट्रीय रक्षा अकादमी और नौसेना अकादमी परीक्षा (I), 2026 – अंतिम परिण",
+    "organization": "Indian Armed Forces",
+    "orgUrl": "https://pib.gov.in",
+    "category": "defence",
+    "datePosted": null,
+    "sourceUrl": "https://pib.gov.in/PressReleaseIframePage.aspx?PRID=2333327",
+    "kind": "result",
+    "releaseDate": "2026-11-05",
+    "datePrecision": "ingest-date",
+    "status": "declared",
+    "resultUrl": "https://pib.gov.in/PressReleaseIframePage.aspx?PRID=2333327",
+    "sourceId": "pib",
+    "qualityScore": 75
   }
 ]
