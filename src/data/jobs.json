@@ -238,21 +238,5 @@
     "notificationPdf": "http://hpsc.gov.in/Portals/0/Ann_Advt_03_2026_SSO_DNA_02_01_2026.pdf",
     "extractionLevel": "list-row",
     "qualityScore": 80
-  },
-  {
-    "slug": "hpsc-revised-bifurcation-for-the-post-of-assistant-director-industrial-safety-an",
-    "title": "Revised Bifurcation for the post of Assistant Director, Industrial Safety and Health in Labour Department,…",
-    "shortTitle": "Revised Bifurcation for the post of Assistant Director, Industrial Saf",
-    "organization": "HPSC",
-    "orgUrl": "http://hpsc.gov.in",
-    "category": "state",
-    "datePosted": "2025-11-20",
-    "sourceUrl": "http://hpsc.gov.in/Portals/0/Ann_Bif_post_Assistant_Director_IndustrialSafety_20_11_2025.pdf",
-    "sourceId": "hpsc-advertisements",
-    "kind": "job",
-    "applyUrl": "https://hpsc.gov.in/en-us/ApplyOnline",
-    "notificationPdf": "http://hpsc.gov.in/Portals/0/Ann_Bif_post_Assistant_Director_IndustrialSafety_20_11_2025.pdf",
-    "extractionLevel": "list-row",
-    "qualityScore": 80
   }
 ]
